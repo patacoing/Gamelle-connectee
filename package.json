@@ -4,7 +4,9 @@
   "description": "pind",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "echo coucou",
+    "dev": "nodemon serveur/ws.js"
   },
   "repository": {
     "type": "git",
@@ -17,6 +19,8 @@
   },
   "homepage": "https://github.com/patacoing/Gamelle-connectee#readme",
   "dependencies": {
+    "mongoose": "^6.1.10",
+    "nodemon": "^2.0.15",
     "ws": "^8.4.2"
   }
 }
