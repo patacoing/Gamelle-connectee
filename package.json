@@ -1,26 +1,24 @@
 {
-  "name": "gamelle-connectee",
+  "name": "pind",
   "version": "1.0.0",
-  "description": "pind",
+  "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "echo coucou",
     "dev": "nodemon serveur/ws.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/patacoing/Gamelle-connectee.git"
-  },
   "author": "",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/patacoing/Gamelle-connectee/issues"
-  },
-  "homepage": "https://github.com/patacoing/Gamelle-connectee#readme",
   "dependencies": {
     "mongoose": "^6.1.10",
     "nodemon": "^2.0.15",
+    "builtins": "^4.0.0",
+    "express": "^4.17.2",
+    "express-ws": "^5.0.2",
+    "mongoose": "^6.1.8",
+    "nodemon": "^2.0.15",
+    "socket.io": "^4.4.1",
     "ws": "^8.4.2"
   }
 }

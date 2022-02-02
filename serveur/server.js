@@ -2,59 +2,63 @@
 
 const WebSocket = require('ws');
 const gamelle = require('./models/models.js');
-const wss = new WebSocket.Server({ port: 8100 });
-
+const wss = new WebSocket.Server({ port: 80 });
 
 wss.on('connection', function connection(ws) {
     console.log("connecté !");
-    ws.on('message', function message(data) {
-        data = JSON.parse(data);
-        console.log("message reçu ! : " + data);
-        ws.id = data.id;
-        wss.clients.forEach((client, i) => {
-            console.log(i);
-        });
-        var json = { "status": "nouveau" };
-        ws.send(JSON.stringify(json));
-        distribution(ws, 500);
+    ws.on('message', function message(data, isBinary) {
+        const message = isBinary ? data : data.toString();
+        console.log(message);
+        let dataJson = JSON.parse(message);
+        ws.id = dataJson.id; //on ajoute un id pour chaque client et pour pouvoir les référencer
+        console.log("ID  = " + dataJson.id);
+        console.log("ACTION = " + dataJson.action);
+        traitement(dataJson, ws);
+
     });
+
+
 });
 
+function traitement(data, ws) {
+    if (data.action == "requestData") {
+        check(data);
+        sendData(data.id, ws);
+    }
+    if (data.action == "modification") {
+        miseAJour(data);
+    }
 
-function traitement(data) {
-    var reponse
-    reponse = check(data);
-    return JSON.stringify(reponse);
 }
 
-
 function check(data) {
-    var reponse;
     gamelle.findOne({ id: data.id })
-        .then(g => {
-            reponse = { "status": "ok" }
-            console.log(reponse);
-            console.log(g);
-            return reponse;
-        })
-        .catch(() => {
-            creerGamelle(data);
-            reponse = { "status": "nouveau" }
-            console.log(reponse);
-            return reponse;
-        });
+        .then()
+        .catch(creerGamelle(data));
 }
 function creerGamelle(data) {
     g = new gamelle({
         id: data.id,
-        repas: [{ heure: Date(), poids: 0 }]
+        poids: 50
     })
-    g.save().then(() => console.log("objet saved")).catch(e => console.log(e));
+    g.save();
 }
 
+function sendData(currentId, ws) {
+    gamelle.findOne({ id: currentId }).
+        then(g => {
+            let json = { poids: g.poids };
+            console.log(json.poids, json.id)
+            ws.send(JSON.stringify(json));
+        }
+        );
+}
 
 /**
  * fonction pour modifier les paramètres de la gamelle : heure de distribution
+ * {
+ *  id,heureAvant, heure
+ * }
  * @param data: json 
  */
 function miseAJour(data) {
