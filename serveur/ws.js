@@ -1,3 +1,5 @@
+
+
 const WebSocket = require('ws');
 const gamelle = require('./models/models.js');
 const wss = new WebSocket.Server({ port: 80 });
@@ -9,12 +11,8 @@ wss.on('connection', function connection(ws) {
     connexion = 1;
     ws.on('message', function message(data) {
         data = JSON.parse(data);
-        console.log("message reçu ! : " + data.id);
-        console.log(wss.clients.length)
-        wss.clients.forEach(function each(client) {
-            console.log("CLIENT ");
-            console.log(client.id);
-        });
+        console.log("message reçu ! : " + data);
+        ws.id = data.id;
         var json = { "status": "nouveau" };
         ws.send(JSON.stringify(json));
     });
