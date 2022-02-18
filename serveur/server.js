@@ -2,7 +2,7 @@
 
 const WebSocket = require('ws');
 const gamelle = require('./models/models.js');
-const wss = new WebSocket.Server({ port: 80 });
+const wss = new WebSocket.Server({ port: 8100 });
 
 wss.on('connection', function connection(ws) {
     console.log("connecté !");
@@ -20,38 +20,60 @@ wss.on('connection', function connection(ws) {
 
 });
 
-function traitement(data, ws) {
-    if (data.action == "requestData") {
-        check(data);
-        sendData(data.id, ws);
-    }
-    if (data.action == "modification") {
-        miseAJour(data);
-    }
+/**
+ * Fonction de traitement de la requête
+ * @param  data : data passé dans le corps de la requête
+ * @param ws : client 
+ */
+async function traitement(data, ws) {
+    switch (data.action) {
+        case "requestData":
+            await check(data);
+            console.log("coucou");
+            sendData(data.id, ws);
 
+            break;
+        case "modification":
+            miseAJour(data);
+            break;
+        default:
+            break;
+    }
 }
 
+/**
+ * Fonction permettant de savoir si la gamelle est présente ou non dans la bdd
+ * @param data : data dans le corps de la requête
+ */
 function check(data) {
-    gamelle.findOne({ id: data.id })
-        .then()
-        .catch(creerGamelle(data));
+    return gamelle.findOne({ id: data.id })
+        .then(async g => {
+            if (g === null) await creerGamelle(data);
+            else console.log("trouvé !");
+        })
+        .catch(e => console.log(e));
 }
+
+/**
+ * Fonction permettant de créer une gamelle dans la bdd
+ * @param data : data passée dans la requête 
+ */
 function creerGamelle(data) {
     g = new gamelle({
         id: data.id,
-        poids: 50
+        repas: [{ heure: Date(), poids: 50 }]
     })
-    g.save();
+    return g.save();
 }
 
+/**
+ * Fonction renvoyant son objet à la gamelle
+ * @param currentId : id de la gamelle
+ * @param ws : client 
+ */
 function sendData(currentId, ws) {
-    gamelle.findOne({ id: currentId }).
-        then(g => {
-            let json = { poids: g.poids };
-            console.log(json.poids, json.id)
-            ws.send(JSON.stringify(json));
-        }
-        );
+    gamelle.findOne({ id: currentId })
+        .then(g => ws.send(JSON.stringify(g)));
 }
 
 /**
