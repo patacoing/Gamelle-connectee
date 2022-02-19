@@ -26,15 +26,16 @@ wss.on('connection', function connection(ws) {
  * @param ws : client 
  */
 async function traitement(data, ws) {
+    await check(data);
     switch (data.action) {
         case "requestData":
-            await check(data);
-            console.log("coucou");
             sendData(data.id, ws);
-
             break;
-        case "modification":
-            miseAJour(data);
+        case "update":
+            update(data, ws);
+            break;
+        case "deleteMeal":
+            deleteMeal(data, ws);
             break;
         default:
             break;
@@ -61,7 +62,7 @@ function check(data) {
 function creerGamelle(data) {
     g = new gamelle({
         id: data.id,
-        repas: [{ heure: Date(), poids: 50 }]
+        repas: [{ id: 1, heure: Date(), poids: 50 }]
     })
     return g.save();
 }
@@ -72,49 +73,57 @@ function creerGamelle(data) {
  * @param ws : client 
  */
 function sendData(currentId, ws) {
-    gamelle.findOne({ id: currentId })
+    return gamelle.findOne({ id: currentId })
         .then(g => ws.send(JSON.stringify(g)));
 }
 
 /**
- * fonction pour modifier les paramètres de la gamelle : heure de distribution
- * {
- *  id,heureAvant, heure
- * }
+ * fonction pour modifier les paramètres de la gamelle : heure de distribution et poids
  * @param data: json 
+ * @param ws : client 
  */
-function miseAJour(data) {
+//TODO: il faut modifier le crontab associé
+function update(data, ws) {
     gamelle.updateOne(
-        { id: data.id, "repas.heure": data.heureAvant },
-        { $set: { id: data.id, "repas.$.heure": data.heure } })
+        { id: data.id, "repas.id": data.repasId },
+        { $set: { "repas.$.heure": data.heure, "repas.$.poids": data.poids } })
         .then(g => {
-            reponse = { "status": "modifie" }
-            console.log(reponse);
-            return reponse;
+            json = g.matchedCount == 0 ? { status: "error" } : { status: "updated" };
+            ws.send(JSON.stringify(json));
         })
+        .catch(e => error(e, ws));
+}
 
-        .catch(() => {
-            creerGamelle(data);
-            reponse = { "status": "nouveau" };
-            console.log(reponse);
-            return reponse;
-        });
+/**
+ * Fonction permettant de supprimer un repas d'une gamelle selon l'id de la gamelle et l'id du repas
+ * @param data : json 
+ * @param ws : client
+ */
+//TODO: il faut supprimer le crontab associé
+function deleteMeal(data, ws) {
+    gamelle.updateOne(
+        { id: data.id },
+        { $pull: { repas: { id: data.repasId } } })
+        .then(g => {
+            json = g.matchedCount == 0 ? { status: "error" } : { status: "deleted" };
+            ws.send(JSON.stringify(json));
+        })
+        .catch(e => error(e, ws));
+}
+
+function error(e, ws) {
+    console.log(e);
+    ws.send(JSON.stringify({ "status": "error" }));
 }
 
 
 //TODO: dès qu'une gamelle est créée, il faut faire un nouveau node-cron avec l'heure spécifiée
 //si on rajoute un repas à une gamelle, il faut faire un node-cron
-//si un repas est supprimé, il faut supprimer le node-cron
 
-/*
-console.log("yo");
-check({ id: 126644894 });
-miseAJour({ id: 126644894, poids: 50 });
-check({ id: 126644894 });
-*/
 
 /**
- * Chaque gamelle aura un node-cron pour chacune de ses heures
+ * Fonction permettant de dire à a gamelle qu'il faut donner une portion de nourriture
+ * Chaque gamelle aura un node-cron pour chacun de ses repas
  */
 async function distribution(ws, poids) {
     let manger = { heure: Date(), poids: poids };
