@@ -1,21 +1,19 @@
 const gamelle = require('./models/models.js');
 const tasks = require("./cron.js");
 
-
-//TODO: il faut que à chaque fois que l'on passe heure dans le json, il soit de la forme
-//12:30 pour ensuite convertir via une fonction qui va retourner un string 
-//utilisable par le crontab
-
-
-module.exports = {
+var action = {
     /**
-    * Fonction permettant de savoir si la gamelle est présente ou non dans la bdd
-    * @param data : data dans le corps de la requête
-    */
+   * Fonction permettant de savoir si la gamelle est présente ou non dans la bdd
+   * @param data : data dans le corps de la requête
+   */
     check: (data, ws) => {
+        if (data.id === undefined) {
+            error("id manquant", ws);
+            return false;
+        }
         return gamelle.findOne({ id: data.id })
             .then(async g => {
-                if (g === null) await creerGamelle(data, ws);
+                if (g === null) await action.creerGamelle(data, ws);
                 else console.log("trouvé !");
             })
             .catch(e => error(e, ws));
@@ -28,7 +26,7 @@ module.exports = {
         g = new gamelle({
             id: data.id,
         })
-        return g.save().then(g => addMeal(data, ws));
+        return g.save().then(g => action.addMeal(data, ws));
     },
     /**
      * Fonction renvoyant son objet à la gamelle
@@ -52,10 +50,10 @@ module.exports = {
             .then(g => {
                 tasks.crontabs.forEach((c, i) => {
                     if (c.id == data.id && c.repasId == data.repasId) {
-                        console.log(tasks.crontabs[i]);
+                        c.stop();
                         tasks.crontabs.splice(i, 1);
-                        //tasks.addCrontab("",)
-                        //TODO:il faut ajout le crontab
+                        tasks.addCrontab(heureCron(data.heure), data.id, data.repasId, () => action.distribution(data, ws));
+
                     }
                 });
                 json = g.matchedCount == 0 ? { status: "error" } : { status: "updated" };
@@ -82,7 +80,8 @@ module.exports = {
             { $push: { repas: { id: ++lastId, heure: data.heure, poids: data.poids } } })
             .then(g => {
                 json = g.matchedCount == 0 ? { status: "error" } : { status: "meal added" };
-                tasks.addCrontab("* * * * *", data.id, lastId, () => console.log("gamelle : " + data.id + " repasId : " + lastId));
+                tasks.addCrontab(heureCron(data.heure), data.id, lastId, () => action.distribution(data, ws));
+                console.log("depuis traitement :" + tasks.crontabs + "."); //FIXME:pour débugguer
                 ws.send(JSON.stringify(json));
             })
             .catch(e => error(e, ws));
@@ -100,7 +99,10 @@ module.exports = {
             .then(g => {
                 json = g.modifiedCount == 0 ? { status: "error" } : { status: "deleted" };
                 tasks.crontabs.forEach((c, i) => {
-                    if (c.id == data.id && c.repasId == data.repasId) tasks.crontabs.splice(i, 1);
+                    if (c.id == data.id && c.repasId == data.repasId) {
+                        c.stop();
+                        tasks.crontabs.splice(i, 1);
+                    }
                 });
                 ws.send(JSON.stringify(json));
             })
@@ -108,23 +110,48 @@ module.exports = {
     },
     /**
      * Fonction permettant de dire à a gamelle qu'il faut donner une portion de nourriture
-     * FIXME: refaire la fonction
+     * Fonction appelé par node-cron
+     * @param ws : client
+     * @param data : json {id, heure,poids}
      */
-    distribution: async (ws, poids) => {
+    distribution: async (data, ws) => {
         //cette fonction sera appelé par le node-cron donc on est censé savoir de quel repas et quel gamelle il s'agit
-        let manger = { heure: Date(), poids: poids };
-        await gamelle.updateOne({ id: ws.id }, { $push: { historique: manger } });
+        var g = await gamelle.findOne({ id: data.id });
+        if (g.historique.length == 0) lastId = 0;
+        else lastId = parseInt(g.historique[g.historique.length - 1].id);
+        time = data.heure.split(" ");
+        h = time[2] + ":" + time[1];
+        let manger = { id: ++lastId, heure: h, poids: data.poids };
+        await gamelle.updateOne({ id: data.id }, { $push: { historique: manger } }); //FIXME: ne fonctionne pas
         ws.send(JSON.stringify({
             action: "manger",
-            poids: poids
+            poids: data.poids
         }));
-        gamelle.findOne({ id: ws.id }).then(g => console.log(g));
     }
 }
 
 
+module.exports = {
+    action
+}
 
+/**
+ * Fonction permettant de transformer l'heure HH:MM sour format crontab
+ * par défaut l'heure est 10h00, si l'argument est mal fournit, l'heure devient 10h00
+ * @param heure : format HH:MM
+ * @returns : syntaxe sous forme de crontab  
+ */
+function heureCron(heure = "10:00") {
+    let tab = heure.split(':');
+    if (tab.length < 1) tab = [10, 10];
+    return "0 " + tab[1] + " " + tab[0] + " * * *";
+}
 
+/**
+ * Fonction permettant de renvoyer une erreur au client
+ * @param e : message de l'erreur 
+ * @param ws : client 
+ */
 function error(e, ws) {
     console.log(e);
     ws.send(JSON.stringify({ "status": "error" }));

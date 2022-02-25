@@ -6,6 +6,7 @@ const action = require("./traitement.js");
 
 
 //TODO: il faut lancer la fonction distribution avec le ws ==> il faut récupérer l'objet
+/*
 (async function init() {
     const gamelles = await gamelle.find();
     gamelles.forEach(g => {
@@ -13,18 +14,15 @@ const action = require("./traitement.js");
             tasks.addCrontab("* * * * *", g.id, repas.id, () => console.log("gamelle : " + g.id + " repas : " + repas.id));
         });
     });
-})();
+})();*/
 
 
 wss.on('connection', function connection(ws) {
     console.log("connecté !");
     ws.on('message', function message(data, isBinary) {
         const message = isBinary ? data : data.toString();
-        console.log(message);
         let dataJson = JSON.parse(message);
         ws.id = dataJson.id; //on ajoute un id pour chaque client et pour pouvoir les référencer
-        console.log("ID  = " + dataJson.id);
-        console.log("ACTION = " + dataJson.action);
         traitement(dataJson, ws);
     });
 });
@@ -35,19 +33,20 @@ wss.on('connection', function connection(ws) {
  * @param ws : client 
  */
 async function traitement(data, ws) {
-    await action.check(data);
+    let check = await action.action.check(data, ws);
+    if (check === false) return false;
     switch (data.action) {
         case "requestData":
-            action.sendData(data.id, ws);
+            action.action.sendData(data.id, ws);
             break;
         case "update":
-            action.update(data, ws);
+            action.action.update(data, ws);
             break;
         case "deleteMeal":
-            action.deleteMeal(data, ws);
+            action.action.deleteMeal(data, ws);
             break;
         case "addMeal":
-            action.addMeal(data, ws);
+            action.action.addMeal(data, ws);
         default:
             break;
     }

@@ -14,11 +14,13 @@ module.exports = {
      */
     //FIXME:il faut pouvoir utiliser crontabs ici et dans les autres fichiers js
     addCrontab: (syntaxe, id, repasId, callback) => {
+        console.log("syntaxe : '" + syntaxe + "'");
         if (!nodeCron.validate(syntaxe)) return false;
         var cron = nodeCron.schedule(syntaxe, callback);
         cron.id = id;
         cron.repasId = repasId;
-        crontabs.push(cron, callback);
+        crontabs.push(cron);
+        console.log("depuis cron \n" + crontabs);
         return true;
     }, crontabs
 }
