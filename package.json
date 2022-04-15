@@ -5,8 +5,8 @@
   "main": "serveur/server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "echo coucou",
-    "dev": "nodemon serveur/serve.js"
+    "start": "node serveur/server.js",
+    "dev": "nodemon serveur/server.js"
   },
   "author": "",
   "license": "ISC",
@@ -15,6 +15,7 @@
     "express": "^4.17.2",
     "express-ws": "^5.0.2",
     "mongoose": "^6.1.8",
+    "node-cron": "^3.0.0",
     "nodemon": "^2.0.15",
     "socket.io": "^4.4.1",
     "ws": "^8.4.2"
