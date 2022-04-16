@@ -42,6 +42,8 @@ wss.on('connection', function connection(ws) {
     //     }
     // }
 
+    //TODO:regarder lors de la connection si les crontabs existent déjà ==> on les supprimer pas meme si le mec se déco
+
     ws.on("error", function error(e) {
         console.log(e);
     })

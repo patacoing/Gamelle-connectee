@@ -1,8 +1,10 @@
 const mongoose = require('mongoose');
 
-//pour le déploiement : mongodb://pind:pind@mongodb:27017
-
-mongoose.connect('mongodb://127.0.0.1:27017');
+var str;
+if (process.env.PRODUCTION == "true") str = "mongodb://pind:pind@mongodb:27017";
+else str = "mongodb://127.0.0.1:27017";
+console.log(str);
+mongoose.connect(str);
 const gamelle = mongoose.Schema({
     id: { type: String, required: true },
     repas: [{ id: { type: String, required: true }, heure: { type: String, required: true }, poids: { type: Number, required: true } }],

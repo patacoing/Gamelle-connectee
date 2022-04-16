@@ -1,12 +1,18 @@
 FROM node:latest
 
-RUN mkdir pind
+RUN mkdir /pind
 
-ENV TZ="Europe/Paris"
+WORKDIR /pind
 
-COPY ./ pind/ 
+
+ENV TZ Europe/Paris
+RUN apt update && apt install tzdata -y
+
+ENV PRODUCTION="true"
+
+COPY ./ ./
 
 RUN npm install
 
-CMD cd pind && npm run start
+CMD npm run start
 

@@ -78,19 +78,37 @@ module.exports = {
             error("champs manquants", ws);
             return false;
         }
+
+        var repas;
+        await this.nextMeal(data, ws, false).then(r => repas = r);
+
         var g = await gamelle.findOne({ id: data.id });
-        lastId = g.repas.length == 0 ? 0 : parseInt(g.repas[g.repas.length - 1].id);
-        return gamelle.updateOne(
-            { id: data.id },
-            { $push: { repas: { id: ++lastId, heure: data.heure, poids: data.poids } } })
-            .then(g => {
-                json = g.matchedCount == 0 ? { status: "error" } : { status: "meal added" };
-                tasks.addCrontab(tasks.heureCron(data.heure), data.id, lastId, () => {
-                    distribution(data, ws)
-                });
-                ws.send(JSON.stringify(json));
-            })
-            .catch(e => error(e, ws));
+        if (g.repas.length < 6) {
+            lastId = g.repas.length == 0 ? 0 : parseInt(g.repas[g.repas.length - 1].id);
+            return gamelle.updateOne(
+                { id: data.id },
+                { $push: { repas: { id: ++lastId, heure: data.heure, poids: data.poids } } })
+                .then(g => {
+                    json = g.matchedCount == 0 ? { status: "error" } : { status: "meal added" };
+                    tasks.addCrontab(tasks.heureCron(data.heure), data.id, lastId, () => {
+                        distribution(data, ws)
+                    });
+                    ws.send(JSON.stringify(json));
+
+
+                    this.nextMeal(data, ws, false).then(r => {
+                        console.log(repas);
+                        if (repas !== undefined)
+                            if ((r.heure != repas.heure) || (r.poids != repas.poids)) ws.send(JSON.stringify({ action: "newNextMeal", repas: r }))
+                    })
+                    //{action:"newNextMeal",repas:}
+                })
+                .catch(e => error(e, ws));
+        } else {
+            ws.send(JSON.stringify({ message: "nombre de repas trop élevé" }));
+            return false;
+        }
+
     },
     /**
      * Fonction permettant de supprimer un repas d'une gamelle selon l'id de la gamelle et l'id du repas
@@ -113,10 +131,11 @@ module.exports = {
      * Fonction permettant de récupérer le prochain repas d'une gamelle selon son id
      * @param data : json {id} 
      * @param ws : client 
+     * @param send : boolean : définit  s'il faut envoyer le message ou pas (pour utiliser la fonction dans les autres)
      * @returns promise
      */
-    //fonctionne
-    nextMeal: (data, ws) => gamelle.findOne(
+    //FIXME: ne fonctionne pas si l'heure la plus proche est au lendemain 
+    nextMeal: (data, ws, send = true) => gamelle.findOne(
         { id: data.id })
         .then(g => {
             if (g.repas.length > 0) {
@@ -147,13 +166,19 @@ module.exports = {
                         }
                     }
                 })
-                ws.send(JSON.stringify(g.repas[index]));
-            } else ws.send(JSON.stringify({ message: "pas de repas disponible" }))
+                if (send) ws.send(JSON.stringify(g.repas[index]));
+                else return g.repas[index];
+
+            } else {
+                if (send) ws.send(JSON.stringify({ message: "pas de repas disponible" }));
+                else return undefined;
+            }
+
         }),
 
     /**
      * Fonction permettant de donner à manger maintenant (fait côté client, on sauvegarde juste dans l'historique)
-     * @param data : json {id,heure,poids} 
+     * @param data : json {id,poids} 
      * @param ws : client 
      * @returns promise
      */
@@ -163,7 +188,11 @@ module.exports = {
         .then(async g => {
             if (g.historique.length == 0) lastId = 0;
             else lastId = parseInt(g.historique[g.historique.length - 1].id);
-            await gamelle.updateOne({ id: data.id }, { $push: { historique: { id: ++lastId, heure: data.heure, poids: data.poids } } });
+            const now = new Date();
+            const heureNow = parseInt(now.getHours());
+            const minuteNow = parseInt(now.getMinutes());
+            const heure = heureNow + ":" + minuteNow;
+            await gamelle.updateOne({ id: data.id }, { $push: { historique: { id: ++lastId, heure: heure, poids: data.poids } } });
             ws.send(JSON.stringify({
                 message: "repas ajouté !"
             }));
@@ -195,7 +224,7 @@ async function distribution(data, ws) {
     else lastId = parseInt(g.historique[g.historique.length - 1].id);
     await gamelle.updateOne({ id: data.id }, { $push: { historique: { id: ++lastId, heure: data.heure, poids: data.poids } } });
     ws.send(JSON.stringify({
-        action: "manger",
+        action: "eatNow",
         poids: data.poids
     }));
 }
