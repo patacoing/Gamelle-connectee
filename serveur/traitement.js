@@ -108,6 +108,66 @@ module.exports = {
             else ws.send(JSON.stringify(json));
         })
         .catch(e => error(e, ws)),
+
+    /**
+     * Fonction permettant de récupérer le prochain repas d'une gamelle selon son id
+     * @param data : json {id} 
+     * @param ws : client 
+     * @returns promise
+     */
+    //fonctionne
+    nextMeal: (data, ws) => gamelle.findOne(
+        { id: data.id })
+        .then(g => {
+            if (g.repas.length > 0) {
+                const now = new Date();
+                const heureNow = parseInt(now.getHours());
+                const minuteNow = parseInt(now.getMinutes());
+                let index = 0;
+                let heureMin = 25
+                let minuteMin = 60
+                g.repas.forEach((r, i) => {
+                    let heure = parseInt(r.heure.split(":")[0]);
+                    let minute = parseInt(r.heure.split(":")[1]);
+                    if (heure >= heureNow) {
+                        let flag = false;
+                        if (heure == heureNow && minute > minuteNow) flag = true;
+                        else if (heure > heureNow) flag = true;
+                        if (flag) {
+                            if (heure <= heureMin) {
+                                let flag = false;
+                                if (heure === heureMin && minute < minuteMin) flag = true;
+                                else if (heure < heureMin) flag = true;
+                                if (flag) {
+                                    heureMin = heure;
+                                    minuteMin = minute;
+                                    index = i;
+                                }
+                            }
+                        }
+                    }
+                })
+                ws.send(JSON.stringify(g.repas[index]));
+            } else ws.send(JSON.stringify({ message: "pas de repas disponible" }))
+        }),
+
+    /**
+     * Fonction permettant de donner à manger maintenant (fait côté client, on sauvegarde juste dans l'historique)
+     * @param data : json {id,heure,poids} 
+     * @param ws : client 
+     * @returns promise
+     */
+    //fonctionne
+    eatNow: (data, ws) => gamelle.findOne(
+        { id: data.id })
+        .then(async g => {
+            if (g.historique.length == 0) lastId = 0;
+            else lastId = parseInt(g.historique[g.historique.length - 1].id);
+            await gamelle.updateOne({ id: data.id }, { $push: { historique: { id: ++lastId, heure: data.heure, poids: data.poids } } });
+            ws.send(JSON.stringify({
+                message: "repas ajouté !"
+            }));
+        })
 }
 
 /**
@@ -129,6 +189,7 @@ function error(e, ws) {
  */
 //fonctionne
 async function distribution(data, ws) {
+    console.log("distribution");
     var g = await gamelle.findOne({ id: data.id });
     if (g.historique.length == 0) lastId = 0;
     else lastId = parseInt(g.historique[g.historique.length - 1].id);
@@ -136,5 +197,5 @@ async function distribution(data, ws) {
     ws.send(JSON.stringify({
         action: "manger",
         poids: data.poids
-    }), (e) => console.log(e));
+    }));
 }

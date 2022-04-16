@@ -72,6 +72,13 @@ async function traitement(data, ws) {
             break;
         case "addMeal":
             action.addMeal(data, ws);
+            break;
+        case "nextMeal":
+            action.nextMeal(data, ws);
+            break;
+        case "eatNow":
+            action.eatNow(data, ws);
+            break;
         default:
             break;
     }

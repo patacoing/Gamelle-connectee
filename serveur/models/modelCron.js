@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 
-mongoose.connect('mongodb://pind:pind@mongodb:27017');
+//pour le déploiement : mongodb://pind:pind@mongodb:27017
+
+mongoose.connect('mongodb://127.0.0.1:27017');
 const cron = mongoose.Schema({
     syntaxe: { type: String, required: true },
     id: { type: String, required: true },

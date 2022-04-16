@@ -96,15 +96,14 @@ module.exports = {
      * @param repasId : id du repas 
      * @param callback : fonction 
      */
-    //FIXME: à tester
 
-    //FIXME:fonctionne 1 fois après relancement du server
+    //FIXME:fonctionne normalement
     updateCrontab: async function (heure, id, repasId, callback) {
         console.log("updateContrab");
         let res = this.getCrontab(id, repasId);
         crontab = res.crontab;
         index = res.index;
-        if (crontab === undefined) return false; //FIXME: ici pose problème
+        if (crontab === undefined) return false;
         crontab.stop();
         crontabs.splice(index, 1);
         await this.addCrontab(heure, id, repasId, callback);
