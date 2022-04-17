@@ -1,5 +1,4 @@
 const nodeCron = require("node-cron");
-const cron = require("./models/modelCron.js");
 crontabs = new Array();
 
 
@@ -17,43 +16,37 @@ module.exports = {
         return "0 " + tab[1] + " " + tab[0] + " * * *";
     },
     /**
+     * Fonction permettant de transformer une syntaxe cron en date au format HH:MM
+     * @param syntaxe : date crontab 
+     * @returns : heure au format HH:MM
+     */
+    //fonctionne
+    cronHeure: function (syntaxe = "0 10 10 * * *") {
+        let tab = syntaxe.split(" ");
+        return tab[2] + ":" + tab[1];
+    },
+    /**
      * Fonction permettant d'ajouter un crontab
-     * @param syntaxe : syntaxe crontab 
-     * @param id : id gamelle 
-     * @param repasId : id repas 
-     * @param callback : fonction à executer
+     * @param data : json {id,repasId,heure,poids}
      * @returns boolean : true si à fonctionner, false si la syntaxe n'est pas bonne
      */
     //fonctionne
-    addCrontab: async (syntaxe, id, repasId, callback) => {
+    addCrontab: function (data, callback) {
         console.log("addCrontab");
+        let id = data.id;
+        let syntaxe = this.heureCron(data.heure);
+        console.log("data.repasId = " + data.repasId);
+        let repasId = data.repasId;
+
         if (!nodeCron.validate(syntaxe)) return false;
         var cr = nodeCron.schedule(syntaxe, callback);
         cr.id = id;
         cr.repasId = repasId;
-        var c = new cron({
-            id: id,
-            repasId: repasId,
-            syntaxe: syntaxe,
-        });
-        await c.save();
+        cr.callback = callback;
+        cr.heure = data.heure;
+        cr.poids = data.poids;
         crontabs.push(cr);
         return true;
-    },
-    /**
-     * Fonction permettant d'ajouter les crontabs d'une gamelle lors de son premier message
-     * @param data json{} 
-     * @param ws : client 
-     */
-    pushInCrontabs: function (data, ws) {
-        data.repas.forEach((r, i) => {
-            var heure = this.heureCron(r.heure);
-            if (!nodeCron.validate(heure)) return false;
-            var cr = nodeCron.schedule(heure, () => distribution(data, ws))
-            cr.id = data.id;
-            cr.repasId = r.id;
-            crontabs.push(cr);
-        });
     },
     /**
      * Fonction permettant de récupérer un crontab suivant un id et un repasId
@@ -84,33 +77,32 @@ module.exports = {
      * @returns : true si la suppression a fonctionné, false sinon
      */
     //fonctionne
-    deleteCrontab: async function (id, repasId) {
+    deleteCrontab: function (id, repasId) {
         var o = this.getCrontab(id, repasId);
+        console.log("o :" + o);
         var index = o.index;
         console.log("index : " + index);
         if (index == -1) return false;
         crontabs[index].stop();
         crontabs.splice(index, 1);
-        var res = await cron.deleteOne({ id: id, repasId: repasId });
-        return res.ok === 1 ? true : false;
+        return true;
     },
     /**
      * Fonction permettant de modifier un crontab
-     * @param heure : heure du cron 
-     * @param id : id de la gamelle 
-     * @param repasId : id du repas 
+     * @param data : json {id,repasId,heure,poids}
      * @param callback : fonction 
      */
-
     //fonctionne
-    updateCrontab: async function (heure, id, repasId, callback) {
+    updateCrontab: function (data, callback) {
         console.log("updateContrab");
+        let id = data.id;
+        let repasId = data.repasId;
         let res = this.getCrontab(id, repasId);
         crontab = res.crontab;
         index = res.index;
         if (crontab === undefined) return false;
         crontab.stop();
         crontabs.splice(index, 1);
-        await this.addCrontab(heure, id, repasId, callback);
+        this.addCrontab(data, callback);
     }, crontabs
 }
