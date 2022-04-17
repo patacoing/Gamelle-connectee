@@ -40,6 +40,11 @@ module.exports = {
         crontabs.push(cr);
         return true;
     },
+    /**
+     * Fonction permettant d'ajouter les crontabs d'une gamelle lors de son premier message
+     * @param data json{} 
+     * @param ws : client 
+     */
     pushInCrontabs: function (data, ws) {
         data.repas.forEach((r, i) => {
             var heure = this.heureCron(r.heure);
@@ -97,7 +102,7 @@ module.exports = {
      * @param callback : fonction 
      */
 
-    //FIXME:fonctionne normalement
+    //fonctionne
     updateCrontab: async function (heure, id, repasId, callback) {
         console.log("updateContrab");
         let res = this.getCrontab(id, repasId);

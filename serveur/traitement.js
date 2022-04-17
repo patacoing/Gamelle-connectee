@@ -15,9 +15,7 @@ module.exports = {
         return gamelle.findOne({ id: data.id })
             .then(async g => {
                 if (g === null) await this.creerGamelle(data, ws);
-                else {
-                    console.log("trouvé!");
-                };
+                else console.log("trouvé!");
             })
             .catch(e => error(e, ws));
     },
@@ -48,21 +46,21 @@ module.exports = {
      * @param ws : client 
      */
     //fonctionne
-    update: (data, ws) => {
+    update: async function (data, ws) {
         console.log("update");
-        gamelle.updateOne(
+        var repas;
+        await this.nextMeal(data, ws, false).then(r => repas = r);
+        return gamelle.updateOne(
             { id: data.id, "repas.id": data.repasId },
             { $set: { "repas.$.heure": data.heure, "repas.$.poids": data.poids } })
             .then(async g => {
                 let test = await tasks.updateCrontab(tasks.heureCron(data.heure), data.id, data.repasId, () => {
                     distribution(data, ws);
                 });
-                if (test === false) {
-                    json = { status: "error" };
-                } else {
-                    json = g.matchedCount == 0 ? { status: "error" } : { status: "updated" };
-                }
-                ws.send(JSON.stringify(json));
+                this.nextMeal(data, ws, false).then(r => {
+                    if ((r.heure != repas.heure) || (r.poids != repas.poids))
+                        ws.send(JSON.stringify({ action: "newNextMeal", repas: r }))
+                })
             })
             .catch(e => error(e, ws));
     },
@@ -78,10 +76,8 @@ module.exports = {
             error("champs manquants", ws);
             return false;
         }
-
         var repas;
         await this.nextMeal(data, ws, false).then(r => repas = r);
-
         var g = await gamelle.findOne({ id: data.id });
         if (g.repas.length < 6) {
             lastId = g.repas.length == 0 ? 0 : parseInt(g.repas[g.repas.length - 1].id);
@@ -89,23 +85,19 @@ module.exports = {
                 { id: data.id },
                 { $push: { repas: { id: ++lastId, heure: data.heure, poids: data.poids } } })
                 .then(g => {
-                    json = g.matchedCount == 0 ? { status: "error" } : { status: "meal added" };
                     tasks.addCrontab(tasks.heureCron(data.heure), data.id, lastId, () => {
                         distribution(data, ws)
                     });
-                    ws.send(JSON.stringify(json));
-
-
                     this.nextMeal(data, ws, false).then(r => {
-                        console.log(repas);
-                        if (repas !== undefined)
+                        console.log(r);
+                        if (repas !== undefined) {
                             if ((r.heure != repas.heure) || (r.poids != repas.poids)) ws.send(JSON.stringify({ action: "newNextMeal", repas: r }))
+                        } else ws.send(JSON.stringify({ action: "newNextMeal", repas: r }));
                     })
-                    //{action:"newNextMeal",repas:}
                 })
                 .catch(e => error(e, ws));
         } else {
-            ws.send(JSON.stringify({ message: "nombre de repas trop élevé" }));
+            ws.send(JSON.stringify({ message: "nombre de repas trop élevé", error: 403 }));
             return false;
         }
 
@@ -117,15 +109,25 @@ module.exports = {
      * @returns promise
      */
     //fonctionne
-    deleteMeal: (data, ws) => gamelle.updateOne(
-        { id: data.id },
-        { $pull: { repas: { id: data.repasId } } })
-        .then(g => {
-            json = g.modifiedCount == 0 ? { status: "error" } : { status: "deleted" };
-            if (!tasks.deleteCrontab(data.id, data.repasId)) error("erreur", ws);
-            else ws.send(JSON.stringify(json));
-        })
-        .catch(e => error(e, ws)),
+    deleteMeal: async function (data, ws) {
+        var repas;
+        await this.nextMeal(data, ws, false).then(r => repas = r);
+        return gamelle.updateOne(
+            { id: data.id },
+            { $pull: { repas: { id: data.repasId } } })
+            .then(info => {
+                if (info.modifiedCount != 0) gamelle.findOne({ id: data.id })
+                    .then(g => {
+                        this.nextMeal(data, ws, false).then(r => {
+                            if (r == undefined) //cas où les repas sont vides
+                                ws.send(JSON.stringify({ action: "newNextMeal", heure: -1, poids: -1 }));
+                            else if (repas !== undefined)
+                                if ((r.heure != repas.heure) || (r.poids != repas.poids)) ws.send(JSON.stringify({ action: "newNextMeal", repas: r }))
+                        })
+                    })
+            })
+            .catch(e => error(e, ws))
+    },
 
     /**
      * Fonction permettant de récupérer le prochain repas d'une gamelle selon son id
@@ -134,7 +136,6 @@ module.exports = {
      * @param send : boolean : définit  s'il faut envoyer le message ou pas (pour utiliser la fonction dans les autres)
      * @returns promise
      */
-    //FIXME: ne fonctionne pas si l'heure la plus proche est au lendemain 
     nextMeal: (data, ws, send = true) => gamelle.findOne(
         { id: data.id })
         .then(g => {
@@ -142,7 +143,7 @@ module.exports = {
                 const now = new Date();
                 const heureNow = parseInt(now.getHours());
                 const minuteNow = parseInt(now.getMinutes());
-                let index = 0;
+                let index = -1;
                 let heureMin = 25
                 let minuteMin = 60
                 g.repas.forEach((r, i) => {
@@ -166,14 +167,28 @@ module.exports = {
                         }
                     }
                 })
-                if (send) ws.send(JSON.stringify(g.repas[index]));
+                console.log(heureMin + "h " + minuteMin + "m index : " + index);
+                if (index == -1) { //cas où le plus proche est le lendemain
+                    let r = g.repas.reduce((r1, r2) => {
+                        let h1 = r1.heure.split(":")[0];
+                        let m1 = r1.heure.split(":")[1];
+                        let h2 = r2.heure.split(":")[0];
+                        let m2 = r2.heure.split(":")[1];
+                        if (h1 <= h2) {
+                            if (h1 == h2) {
+                                return (m1 < m2) ? r1 : r2;
+                            } else return r1
+                        } else return r2;
+                    });
+                    index = g.repas.indexOf(r);
+                }
+                if (send) ws.send(JSON.stringify({ action: "newNextMeal", repas: g.repas[index] }));
                 else return g.repas[index];
 
             } else {
-                if (send) ws.send(JSON.stringify({ message: "pas de repas disponible" }));
+                if (send) ws.send(JSON.stringify({ action: "newNextMeal", heure: -1, poids: -1 }));
                 else return undefined;
             }
-
         }),
 
     /**
@@ -193,9 +208,6 @@ module.exports = {
             const minuteNow = parseInt(now.getMinutes());
             const heure = heureNow + ":" + minuteNow;
             await gamelle.updateOne({ id: data.id }, { $push: { historique: { id: ++lastId, heure: heure, poids: data.poids } } });
-            ws.send(JSON.stringify({
-                message: "repas ajouté !"
-            }));
         })
 }
 
@@ -206,7 +218,6 @@ module.exports = {
  */
 function error(e, ws) {
     console.log(e);
-    ws.send(JSON.stringify({ "status": "error" }));
 }
 
 
