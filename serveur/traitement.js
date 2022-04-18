@@ -36,7 +36,7 @@ module.exports = {
      * @param ws : client 
      */
     //fonctionne
-    sendData: (currentId, ws) => gamelle.findOne({ id: currentId })
+    requestData: (currentId, ws) => gamelle.findOne({ id: currentId }).select("-historique")
         .then(g => ws.send(JSON.stringify(g)))
         .catch(e => error(e)),
 
@@ -225,6 +225,17 @@ module.exports = {
             const minuteNow = parseInt(now.getMinutes());
             const heure = heureNow + ":" + minuteNow;
             await gamelle.updateOne({ id: data.id }, { $push: { historique: { id: ++lastId, heure: heure, poids: data.poids } } });
+        }),
+
+    /**
+     * Fonction permettant de récupérer l'historique des repas d'une gamelle
+     * @param data : json{id} 
+     * @param ws : client 
+     */
+    history: (data, ws) => gamelle.findOne(
+        { id: data.id })
+        .then(g => {
+            ws.send(JSON.stringify({ historique: g.historique }));
         })
 }
 

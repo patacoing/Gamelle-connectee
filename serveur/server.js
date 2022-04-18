@@ -35,7 +35,7 @@ async function traitement(data, ws) {
     if (check === false) return false;
     switch (data.action) {
         case "requestData":
-            action.sendData(data.id, ws);
+            action.requestData(data.id, ws);
             break;
         case "update":
             action.update(data, ws);
@@ -51,6 +51,9 @@ async function traitement(data, ws) {
             break;
         case "eatNow":
             action.eatNow(data);
+            break;
+        case "history":
+            action.history(data, ws);
             break;
         default:
             break;
