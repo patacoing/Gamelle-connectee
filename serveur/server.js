@@ -3,6 +3,8 @@ const wss = new WebSocket.Server({ port: 8100 });
 const tasks = require("./cron.js");
 const action = require("./traitement.js");
 
+action.restartServer();
+
 wss.on('connection', function connection(ws) {
     var firstMessage = true;
     console.log("connecté !");

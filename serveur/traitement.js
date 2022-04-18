@@ -3,21 +3,34 @@ const tasks = require("./cron.js");
 
 module.exports = {
     /**
+     * Fonction lancée au démarrage/redémarrage du serveur, elle permet de lancer des crontabs pour chaque
+     * repas de chaque gamelle, sans que ceux-ci ne fassent quelquechose ainsi
+     * les repas sont rattribué de façon normal dès la reconnexion des gamelles au fur et à mesure
+     */
+    //fonctionne
+    restartServer: () => gamelle.find()
+        .then(gamelles => gamelles.forEach(g => {
+            let id = g.id;
+            g.repas.forEach(r => {
+                tasks.addCrontab({ id: id, repasId: r.id, heure: r.heure, poids: r.poids }, () => { });
+            })
+        })),
+    /**
      * Fonction permettant de savoir si la gamelle est présente ou non dans la bdd
      * @param data : data dans le corps de la requête
      */
     //fonctionne
     check: function (data, ws) {
         if (data.id === undefined) {
-            error("id manquant");
+            error("* check - id manquant");
             return false;
         }
         return gamelle.findOne({ id: data.id })
             .then(async g => {
                 if (g === null) await this.creerGamelle(data, ws);
-                else console.log("trouvé!");
+                else console.log("* check - trouvé!");
             })
-            .catch(e => error(e));
+            .catch(e => error("* check - " + e));
     },
     /**
     * Fonction permettant de créer une gamelle dans la bdd
@@ -38,7 +51,7 @@ module.exports = {
     //fonctionne
     requestData: (currentId, ws) => gamelle.findOne({ id: currentId }).select("-historique")
         .then(g => ws.send(JSON.stringify(g)))
-        .catch(e => error(e)),
+        .catch(e => error("* requestData - " + e)),
 
     /**
      * fonction pour modifier les paramètres de la gamelle : heure de distribution et poids
@@ -61,7 +74,7 @@ module.exports = {
                         ws.send(JSON.stringify({ action: "newNextMeal", repas: r }))
                 })
             })
-            .catch(e => error(e));
+            .catch(e => error("* update - " + e));
     },
     /**
      * Fonction permettant d'ajouter un repas à une gamelle
@@ -72,7 +85,7 @@ module.exports = {
     //fonctionne
     addMeal: async function (data, ws) {
         if (data.id === undefined || data.heure === undefined || data.poids === undefined) {
-            error("champs manquants");
+            error("* addMeal - champs manquants");
             return false;
         }
         var repas;
@@ -93,7 +106,7 @@ module.exports = {
                         } else ws.send(JSON.stringify({ action: "newNextMeal", repas: r }));
                     })
                 })
-                .catch(e => error(e));
+                .catch(e => error("* addMeal - " + e));
         } else {
             ws.send(JSON.stringify({ message: "nombre de repas trop élevé", error: 403 }));
             return false;
@@ -143,7 +156,7 @@ module.exports = {
                         })
                     })
             })
-            .catch(e => error(e))
+            .catch(e => error("* deleteMeal - " + e))
     },
 
     /**
@@ -185,7 +198,7 @@ module.exports = {
                         }
                     }
                 })
-                console.log(heureMin + "h " + minuteMin + "m index : " + index);
+                console.log("* nextMeal - " + heureMin + "h " + minuteMin + "m index : " + index);
                 if (index == -1) { //cas où le plus proche est le lendemain
                     let r = g.repas.reduce((r1, r2) => {
                         let h1 = r1.heure.split(":")[0];
@@ -257,7 +270,7 @@ function error(e) {
  */
 //fonctionne
 async function distribution(data, ws) {
-    console.log("distribution");
+    console.log("* distribution");
     var g = await gamelle.findOne({ id: data.id });
     let lastId = g.historique.length == 0 ? 0 : g.historique[g.historique.length - 1].id;
     await gamelle.updateOne({ id: data.id }, { $push: { historique: { id: ++lastId, heure: data.heure, poids: data.poids } } });

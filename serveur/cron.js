@@ -32,12 +32,9 @@ module.exports = {
      */
     //fonctionne
     addCrontab: function (data, callback) {
-        console.log("addCrontab");
         let id = data.id;
         let syntaxe = this.heureCron(data.heure);
-        console.log("data.repasId = " + data.repasId);
         let repasId = data.repasId;
-
         if (!nodeCron.validate(syntaxe)) return false;
         var cr = nodeCron.schedule(syntaxe, callback);
         cr.id = id;
@@ -46,6 +43,7 @@ module.exports = {
         cr.heure = data.heure;
         cr.poids = data.poids;
         crontabs.push(cr);
+        console.log(`* addCrontab - crontab {id:${id}, repasId:${repasId}}`);
         return true;
     },
     /**
@@ -79,12 +77,11 @@ module.exports = {
     //fonctionne
     deleteCrontab: function (id, repasId) {
         var o = this.getCrontab(id, repasId);
-        console.log("o :" + o);
         var index = o.index;
-        console.log("index : " + index);
         if (index == -1) return false;
         crontabs[index].stop();
         crontabs.splice(index, 1);
+        console.log(`* deleteCrontab - crontab {id:${id}, repasId:${repasId}}`);
         return true;
     },
     /**
@@ -94,7 +91,6 @@ module.exports = {
      */
     //fonctionne
     updateCrontab: function (data, callback) {
-        console.log("updateContrab");
         let id = data.id;
         let repasId = data.repasId;
         let res = this.getCrontab(id, repasId);
@@ -104,5 +100,6 @@ module.exports = {
         crontab.stop();
         crontabs.splice(index, 1);
         this.addCrontab(data, callback);
+        console.log("* updateContrab - cron update");
     }, crontabs
 }
