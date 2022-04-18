@@ -1,173 +1,215 @@
 const gamelle = require('./models/models.js');
 const tasks = require("./cron.js");
 
-module.exports = {
-    /**
-     * Fonction lancée au démarrage/redémarrage du serveur, elle permet de lancer des crontabs pour chaque
-     * repas de chaque gamelle, sans que ceux-ci ne fassent quelquechose ainsi
-     * les repas sont rattribué de façon normal dès la reconnexion des gamelles au fur et à mesure
-     */
-    //fonctionne
-    restartServer: () => gamelle.find()
+
+
+/**
+ * Tableau sous forme {id,ws}
+ * recense les gamelles
+ */
+var clients = new Array();;
+
+/**
+ * Fonction lancée au démarrage/redémarrage du serveur, elle permet de lancer des crontabs pour chaque
+ * repas de chaque gamelle, sans que ceux-ci ne fassent quelquechose ainsi
+ * les repas sont rattribué de façon normal dès la reconnexion des gamelles au fur et à mesure
+ */
+//fonctionne
+function restartServer() {
+    return gamelle.find()
         .then(gamelles => gamelles.forEach(g => {
             let id = g.id;
             g.repas.forEach(r => {
                 tasks.addCrontab({ id: id, repasId: r.id, heure: r.heure, poids: r.poids }, () => { });
             })
-        })),
-    /**
-     * Fonction permettant de savoir si la gamelle est présente ou non dans la bdd
-     * @param data : data dans le corps de la requête
-     */
-    //fonctionne
-    check: function (data, ws) {
-        if (data.id === undefined) {
-            error("* check - id manquant");
-            return false;
-        }
-        return gamelle.findOne({ id: data.id })
-            .then(async g => {
-                if (g === null) await this.creerGamelle(data, ws);
-                else console.log("* check - trouvé!");
-            })
-            .catch(e => error("* check - " + e));
-    },
-    /**
-    * Fonction permettant de créer une gamelle dans la bdd
-    * @param data : data passée dans la requête 
-    */
-    //fonctionne
-    creerGamelle: function (data, ws) {
-        g = new gamelle({
-            id: data.id,
+        }))
+}
+
+/**
+ * Fonction permettant de savoir si la gamelle est présente ou non dans la bdd
+ * @param data : data dans le corps de la requête
+ */
+//fonctionne
+function check(data, ws) {
+    if (data.id === undefined) {
+        error("* check - id manquant");
+        return false;
+    }
+    return gamelle.findOne({ id: data.id })
+        .then(async g => {
+            if (g === null) await creerGamelle(data, ws);
+            else console.log("* check - trouvé!");
         })
-        return g.save();
-    },
-    /**
-     * Fonction renvoyant son objet à la gamelle
-     * @param currentId : id de la gamelle
-     * @param ws : client 
-     */
-    //fonctionne
-    requestData: (currentId, ws) => gamelle.findOne({ id: currentId }).select("-historique")
+        .catch(e => error("* check - " + e));
+}
+
+/**
+* Fonction permettant de créer une gamelle dans la bdd
+* @param data : data passée dans la requête 
+*/
+//fonctionne
+function creerGamelle(data) {
+    g = new gamelle({
+        id: data.id,
+    })
+    return g.save();
+}
+
+/**
+ * Fonction renvoyant son objet à la gamelle
+ * @param currentId : id de la gamelle
+ * @param ws : client 
+ */
+//fonctionne
+function requestData(currentId, ws) {
+    return gamelle.findOne({ id: currentId }).select("-historique")
         .then(g => ws.send(JSON.stringify(g)))
-        .catch(e => error("* requestData - " + e)),
+        .catch(e => error("* requestData - " + e))
+}
 
-    /**
-     * fonction pour modifier les paramètres de la gamelle : heure de distribution et poids
-     * @param data: json {id,repasId,heure,poids}
-     * @param ws : client 
-     */
-    //fonctionne
-    update: async function (data, ws) {
-        console.log("update");
-        var repas;
-        await this.nextMeal(data, ws, false).then(r => repas = r);
-        return gamelle.updateOne(
-            { id: data.id, "repas.id": data.repasId },
-            { $set: { "repas.$.heure": data.heure, "repas.$.poids": data.poids } })
-            .then(async g => {
-                let test = tasks.updateCrontab(data, () => distribution(data, ws));
-                console.log("test = " + test);
-                this.nextMeal(data, ws, false).then(r => {
-                    if ((r.heure != repas.heure) || (r.poids != repas.poids))
-                        ws.send(JSON.stringify({ action: "newNextMeal", repas: r }))
-                })
+/**
+ * fonction pour modifier les paramètres de la gamelle : heure de distribution et poids
+ * @param data: json {id,repasId,heure,poids}
+ * @param ws : client 
+ */
+//FIXME: quand update avec le client, la fonction distribution est lancée
+//mais la gamelle ne reçoit pas le message
+async function update(data, ws) {
+    ws = isArduino(ws, data.id);
+    if (ws === false) return;
+    var repas;
+    await nextMeal(data, ws, false).then(r => repas = r);
+    return gamelle.updateOne(
+        { id: data.id, "repas.id": data.repasId },
+        { $set: { "repas.$.heure": data.heure, "repas.$.poids": data.poids } })
+        .then(async g => {
+            let test = tasks.updateCrontab(data, () => distribution(data, ws));
+            console.log("test = " + test);
+            nextMeal(data, ws, false).then(r => {
+                if ((r.heure != repas.heure) || (r.poids != repas.poids))
+                    ws.send(JSON.stringify({ action: "newNextMeal", repas: r }))
             })
-            .catch(e => error("* update - " + e));
-    },
-    /**
-     * Fonction permettant d'ajouter un repas à une gamelle
-     * @param data : json {id,heure,poids}
-     * @param ws : client 
-     * @returns promise
-     */
-    //fonctionne
-    addMeal: async function (data, ws) {
-        if (data.id === undefined || data.heure === undefined || data.poids === undefined) {
-            error("* addMeal - champs manquants");
-            return false;
-        }
-        var repas;
-        await this.nextMeal(data, ws, false).then(r => repas = r);
-        var g = await gamelle.findOne({ id: data.id });
-        if (g.repas.length < 6) {
-            lastId = g.repas.length == 0 ? 0 : parseInt(g.repas[g.repas.length - 1].id);
-            return gamelle.updateOne(
-                { id: data.id },
-                { $push: { repas: { id: ++lastId, heure: data.heure, poids: data.poids } } })
-                .then(g => {
-                    data.repasId = lastId;
-                    tasks.addCrontab(data, () => distribution(data, ws));
-                    this.nextMeal(data, ws, false).then(r => {
-                        console.log(r);
-                        if (repas !== undefined) {
-                            if ((r.heure != repas.heure) || (r.poids != repas.poids)) ws.send(JSON.stringify({ action: "newNextMeal", repas: r }))
-                        } else ws.send(JSON.stringify({ action: "newNextMeal", repas: r }));
-                    })
-                })
-                .catch(e => error("* addMeal - " + e));
-        } else {
-            ws.send(JSON.stringify({ message: "nombre de repas trop élevé", error: 403 }));
-            return false;
-        }
-    },
+        })
+        .catch(e => error("* update - " + e));
+}
 
-    /**
-     * Fonction permettant de réattribuer les repas à une gamelle venant de se reconnecter
-     * @param indexCron : tableau de json {id,repasId}
-     * @param ws : client 
-     */
-    restartCrontabs: function (indexCron, ws) {
-        indexCron.forEach(i => {
-            let cr = tasks.crontabs.find(e => e.id === i.id && e.repasId === i.repasId);
-            let data = {
-                id: cr.id,
-                repasId: cr.repasId,
-                heure: cr.heure,
-                poids: cr.poids
-            }
-            tasks.deleteCrontab(data.id, data.repasId);
-            tasks.addCrontab(data, () => distribution(data, ws));
-        });
-    },
-    /**
-     * Fonction permettant de supprimer un repas d'une gamelle selon l'id de la gamelle et l'id du repas
-     * @param data : json {id,repasId}
-     * @param ws : client
-     * @returns promise
-     */
-    //fonctionne
-    deleteMeal: async function (data, ws) {
-        var repas;
-        await this.nextMeal(data, ws, false).then(r => repas = r);
+/**
+ * Fonctionne permettant de renvoyer l'objet websocket si l'on est une gamelle ou l'on provient de l'appli web
+ * @param ws : client 
+ * @param id : id de la gamelle 
+ * @returns objet websocket à lequel envoyer la donnée
+ */
+function isArduino(ws, id) {
+    if (!ws.isArduino) {
+        c = clients.find(c => c.id === id);
+        if (c === undefined) {
+            ws.send(JSON.stringify({ message: "gamelle non connectée", error: 404 }));
+            return false;
+        } else return c.ws;
+    } else return ws;
+}
+
+/**
+ * Fonction permettant d'ajouter un repas à une gamelle
+ * @param data : json {id,heure,poids}
+ * @param ws : client 
+ * @returns promise
+ */
+//fonctionne
+async function addMeal(data, ws) {
+    if (data.id === undefined || data.heure === undefined || data.poids === undefined) {
+        error("* addMeal - champs manquants");
+        return false;
+    }
+    ws = isArduino(ws, data.id);
+    if (ws === false) return;
+    var repas;
+    await nextMeal(data, ws, false).then(r => repas = r);
+    var g = await gamelle.findOne({ id: data.id });
+    if (g.repas.length < 6) {
+        lastId = g.repas.length == 0 ? 0 : parseInt(g.repas[g.repas.length - 1].id);
         return gamelle.updateOne(
             { id: data.id },
-            { $pull: { repas: { id: data.repasId } } })
-            .then(info => {
-                if (info.modifiedCount != 0) gamelle.findOne({ id: data.id })
-                    .then(async g => {
-                        tasks.deleteCrontab(data.id, data.repasId);
-                        this.nextMeal(data, ws, false).then(r => {
-                            if (r == undefined) //cas où les repas sont vides
-                                ws.send(JSON.stringify({ action: "newNextMeal", repas: { heure: -1, poids: -1 } }));
-                            else if (repas !== undefined)
-                                if ((r.heure != repas.heure) || (r.poids != repas.poids)) ws.send(JSON.stringify({ action: "newNextMeal", repas: r }))
-                        })
-                    })
+            { $push: { repas: { id: ++lastId, heure: data.heure, poids: data.poids } } })
+            .then(g => {
+                data.repasId = lastId;
+                tasks.addCrontab(data, () => distribution(data, ws));
+                nextMeal(data, ws, false).then(r => {
+                    console.log(r);
+                    if (repas !== undefined) {
+                        if ((r.heure != repas.heure) || (r.poids != repas.poids)) ws.send(JSON.stringify({ action: "newNextMeal", repas: r }))
+                    } else ws.send(JSON.stringify({ action: "newNextMeal", repas: r }));
+                })
             })
-            .catch(e => error("* deleteMeal - " + e))
-    },
+            .catch(e => error("* addMeal - " + e));
+    } else {
+        ws.send(JSON.stringify({ message: "nombre de repas trop élevé", error: 403 }));
+        return false;
+    }
+}
 
-    /**
-     * Fonction permettant de récupérer le prochain repas d'une gamelle selon son id
-     * @param data : json {id} 
-     * @param ws : client 
-     * @param send : boolean : définit  s'il faut envoyer le message ou pas (pour utiliser la fonction dans les autres)
-     * @returns promise
-     */
-    //fonctionne
-    nextMeal: (data, ws, send = true) => gamelle.findOne(
+/**
+ * Fonction permettant de réattribuer les repas à une gamelle venant de se reconnecter
+ * @param indexCron : tableau de json {id,repasId}
+ * @param ws : client 
+*/
+//fonctionne
+function restartCrontabs(indexCron, ws) {
+    indexCron.forEach(i => {
+        let cr = tasks.crontabs.find(e => e.id === i.id && e.repasId === i.repasId);
+        let data = {
+            id: cr.id,
+            repasId: cr.repasId,
+            heure: cr.heure,
+            poids: cr.poids
+        }
+        tasks.deleteCrontab(data.id, data.repasId);
+        tasks.addCrontab(data, () => distribution(data, ws));
+    });
+}
+
+/**
+ * Fonction permettant de supprimer un repas d'une gamelle selon l'id de la gamelle et l'id du repas
+ * @param data : json {id,repasId}
+ * @param ws : client
+ * @returns promise
+ */
+//fonctionne
+//TODO: à tester avec l'appli web
+async function deleteMeal(data, ws) {
+    ws = isArduino(ws, data.id);
+    if (ws === false) return;
+    var repas;
+    await nextMeal(data, ws, false).then(r => repas = r);
+    return gamelle.updateOne(
+        { id: data.id },
+        { $pull: { repas: { id: data.repasId } } })
+        .then(info => {
+            if (info.modifiedCount != 0) gamelle.findOne({ id: data.id })
+                .then(async g => {
+                    tasks.deleteCrontab(data.id, data.repasId);
+                    nextMeal(data, ws, false).then(r => {
+                        if (r == undefined) //cas où les repas sont vides
+                            ws.send(JSON.stringify({ action: "newNextMeal", repas: { heure: -1, poids: -1 } }));
+                        else if (repas !== undefined)
+                            if ((r.heure != repas.heure) || (r.poids != repas.poids)) ws.send(JSON.stringify({ action: "newNextMeal", repas: r }))
+                    })
+                })
+        })
+        .catch(e => error("* deleteMeal - " + e))
+}
+
+/**
+ * Fonction permettant de récupérer le prochain repas d'une gamelle selon son id
+ * @param data : json {id} 
+ * @param ws : client 
+ * @param send : boolean : définit  s'il faut envoyer le message ou pas (pour utiliser la fonction dans les autres)
+ * @returns promise
+ */
+//fonctionne
+//TODO: à tester avec l'appli web
+function nextMeal(data, ws, send = true) {
+    return gamelle.findOne(
         { id: data.id })
         .then(g => {
             if (g.repas.length > 0) {
@@ -220,16 +262,21 @@ module.exports = {
                 if (send) ws.send(JSON.stringify({ action: "newNextMeal", heure: -1, poids: -1 }));
                 else return undefined;
             }
-        }),
+        })
+}
 
-    /**
-     * Fonction permettant de donner à manger maintenant (fait côté client, on sauvegarde juste dans l'historique)
-     * @param data : json {id,poids} 
-     * @param ws : client 
-     * @returns promise
-     */
-    //fonctionne
-    eatNow: (data) => gamelle.findOne(
+/**
+ * Fonction permettant de donner à manger maintenant (fait côté client, on sauvegarde juste dans l'historique)
+ * @param data : json {id,poids} 
+ * @param ws : client 
+ * @returns promise
+ */
+//fonctionne
+//TODO: à tester avec l'appli web
+function eatNow(data, ws) {
+    ws = isArduino(ws, data.id);
+    if (ws === false) return;
+    return gamelle.findOne(
         { id: data.id })
         .then(async g => {
             let lastId = g.historique.length == 0 ? 0 : g.historique[g.historique.length - 1].id;
@@ -238,14 +285,18 @@ module.exports = {
             const minuteNow = parseInt(now.getMinutes());
             const heure = heureNow + ":" + minuteNow;
             await gamelle.updateOne({ id: data.id }, { $push: { historique: { id: ++lastId, heure: heure, poids: data.poids } } });
-        }),
+            nextMeal(data, ws);
+        })
+}
 
-    /**
-     * Fonction permettant de récupérer l'historique des repas d'une gamelle
-     * @param data : json{id} 
-     * @param ws : client 
-     */
-    history: (data, ws) => gamelle.findOne(
+/**
+ * Fonction permettant de récupérer l'historique des repas d'une gamelle
+ * @param data : json{id} 
+ * @param ws : client 
+ */
+//fonctionne
+function history(data, ws) {
+    return gamelle.findOne(
         { id: data.id })
         .then(g => {
             ws.send(JSON.stringify({ historique: g.historique }));
@@ -253,12 +304,15 @@ module.exports = {
 }
 
 /**
- * Fonction permettant de renvoyer une erreur au client
- * @param e : message de l'erreur 
+ * Fonction permettant de mettre à jour les clients
+ * si c'est une nouvelle gamelle : on l'ajoute, sinon on remplace le ws
  * @param ws : client 
  */
-function error(e) {
-    console.log(e);
+//fonctionne
+function updateClients(ws) {
+    let index = clients.findIndex(c => c.id === ws.id);
+    if (index !== -1) clients[index].ws = ws; //sinon le ws ne sera plus valide après la déconnexion
+    else clients.push({ id: ws.id, ws: ws });
 }
 
 
@@ -278,4 +332,34 @@ async function distribution(data, ws) {
         action: "eatNow",
         poids: data.poids
     }));
+    nextMeal(data, ws);
 }
+
+/**
+ * Fonction permettant de renvoyer une erreur au client
+ * @param e : message de l'erreur 
+ * @param ws : client 
+ */
+function error(e) {
+    console.log(e);
+}
+
+module.exports = {
+    restartServer,
+    check,
+    requestData,
+    update,
+    addMeal,
+    restartCrontabs,
+    deleteMeal,
+    nextMeal,
+    eatNow,
+    history,
+    clients,
+    updateClients
+}
+
+
+
+
+

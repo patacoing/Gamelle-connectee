@@ -3,6 +3,7 @@ const wss = new WebSocket.Server({ port: 8100 });
 const tasks = require("./cron.js");
 const action = require("./traitement.js");
 
+
 action.restartServer();
 
 wss.on('connection', function connection(ws) {
@@ -12,11 +13,10 @@ wss.on('connection', function connection(ws) {
         const message = isBinary ? data : data.toString();
         let dataJson = JSON.parse(message);
         ws.id = dataJson.id; //on ajoute un id pour chaque client et pour pouvoir les référencer
-
-        if (firstMessage) {
+        dataJson.isArduino === undefined ? ws.isArduino = false : ws.isArduino = true;
+        if (firstMessage && ws.isArduino) {
+            action.updateClients(ws);
             var gamelleCrontabs = tasks.crontabs.filter(crontab => crontab.id == ws.id).map(crontab => { return { id: crontab.id, repasId: crontab.repasId } });
-            console.log("gamelleCrontabs");
-            console.log(gamelleCrontabs);
             action.restartCrontabs(gamelleCrontabs, ws);
             firstMessage = false;
         }
@@ -52,7 +52,7 @@ async function traitement(data, ws) {
             action.nextMeal(data, ws);
             break;
         case "eatNow":
-            action.eatNow(data);
+            action.eatNow(data, ws);
             break;
         case "history":
             action.history(data, ws);
