@@ -48,11 +48,7 @@ void welcome()
 {
   afficherImage(&bmbienvenue, 0, 0);
 }
-void mainMenu()
-{
-  DynamicJsonDocument json = requestData("requestData");
-  afficherImage(&bmmenu_principal, 0, 0);
-}
+
 void initScreen()
 {
   Wire.begin();

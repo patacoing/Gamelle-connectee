@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <!-- Latest compiled and minified CSS -->
+    <script src="jquery-3.4.1.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css"
+        integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap-theme.min.css"
+        integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js"
+        integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+        crossorigin="anonymous"></script>
+
+
+    <script type="text/javascript" src="script.js"></script>
+    <title>Gamelle connectée</title>
+</head>
+
+<body>
+    <div id="conteneur">
+        <div id="entete">
+            <div id="afterlog">
+                <input type="button" value="deconnexion" id="deconnexion">
+            </div>
+            <div id="login">
+                <h2>Numéro appairage</h2>
+                <input type="text" class="form-control" value="228181341820716470" id="Appairage">
+                <input type=button value="Go!" id="connexion">
+            </div>
+        </div>
+        <div id="corps">
+            <div id="goNewRepas">
+                <h3>Créer un repas : </h3>
+                <input type="button" value="Go!" id="goCreation">
+            </div>
+            <div id="repas">
+                <h3>Repas courant : </h3>
+                <select id="listRepas"></select>
+                <input type="button" value="modifier" id="modifier">
+                <input type="button" value="supprimer" id="supprimer">
+            </div>
+            <div id="updateCreateRepas">
+                <h3>Renseignez les valeurs</h3>
+                <p>heure : </p>
+                <input type="time" id="time" min="00:00" max="23:59">
+                <p> poids en grammmes</p>
+                <input type="number" inputmode="none" class="form-control" onKeyDown="return false" id="poids" value="0"
+                    min="0" max="300">
+                <input type="button" id="creationRepas" value="créer!">
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

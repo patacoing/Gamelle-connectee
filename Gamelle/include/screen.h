@@ -21,7 +21,6 @@
 
 void initScreen();
 void welcome();
-void mainMenu();
 boolean afficherString(char *chaine, uint8_t x, uint8_t y);
 void changerTaillePolice(enum LCD_FontSort font, enum LCD_CharMode cMode);
 void cleanFont(uint8_t x, uint8_t y, uint8_t width, uint8_t height, enum LCD_DrawMode cMode);

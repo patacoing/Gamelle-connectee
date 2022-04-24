@@ -2,11 +2,14 @@
 #define WEBSOCKET
 #include <webSocket.h>
 #endif
-
-char ssid[] = "FREEBOX_LUC_Y7";   // SSID (nom)
-char pass[] = "watterdal62380";   // mot de passe
-int status = WL_IDLE_STATUS;      // status
-char server[] = "192.168.43.137"; // IP du serveur distant
+#ifndef TRAITEMENT
+#define TRAITEMENT
+#include <traitement.h>
+#endif
+char ssid[] = "FREEBOX_LUC_Y7";  // SSID (nom)
+char pass[] = "watterdal62380";  // mot de passe
+int status = WL_IDLE_STATUS;     // status
+char server[] = "141.94.203.97"; // IP du serveur distant
 String id;
 
 WiFiClient wifi;
@@ -129,10 +132,14 @@ DynamicJsonDocument getMessage()
 DynamicJsonDocument requestData(String action)
 {
     String s = "{\"action\":";
+    s.concat("\"");
     s.concat(action);
-    s.concat(",");
+    s.concat("\"");
+    s.concat(",\"isArduino\" : 1 ,");
     s.concat("\"id\":");
+    s.concat("\"");
     s.concat(id);
+    s.concat("\"");
     s.concat("}");
     Serial.println(s);
     sendMessage(s);
@@ -155,7 +162,7 @@ DynamicJsonDocument getNextMeal()
 DynamicJsonDocument waitMessage()
 { // on ne reçoit peut-etre pas directement le message si on a de la latence, donc on retente si on ne reçoit rien, de plus on regarde si on est encore connecté
     DynamicJsonDocument json = getMessage();
-    while (!json["action"].isNull())
+    while (json.isNull())
     {
         delay(100);
         checkConnection();
@@ -166,49 +173,93 @@ DynamicJsonDocument waitMessage()
 
 void checkMessage()
 {
+    String s1 = "eatNow";
+    String s2 = "newNextMeal";
     DynamicJsonDocument json = getMessage();
-
     if (!json["action"].isNull())
     {
-        Serial.println("action!");
-        /** if (json["action"] == "manger")
-             distribution(json["poids"]);*/
+        String action = json["action"];
+        if (s1.equals(action))
+        {
+            Serial.println("coucou!!");
+            int poids = json["poids"];
+            distribution(poids);
+        }
+        else if (s2.equals(action))
+        {
+            showNextMeal(json);
+        }
     }
 }
-void deleateMeal(int index, DynamicJsonDocument json)
+void deleteMeal(int index, DynamicJsonDocument json)
 {
-    String s = "{\"action\":\"deleateMeal\", \"id\":";
+    String s = "{\"action\":\"deleteMeal\", \"id\":";
+    s.concat("\"");
     s.concat(id);
+    s.concat("\"");
+    s.concat(",\"isArduino\" : 1 ,");
     String repasId = json["repas"][index]["id"];
-    s.concat("\"repasID\":");
+    s.concat("\"repasId\":");
+    s.concat("\"");
     s.concat(repasId);
+    s.concat("\"");
     s.concat("}");
     Serial.println(s);
     sendMessage(s);
     // TODO: faire des modifications pour l'écran
 }
 
-void updateData(int index, int heure, int poids, DynamicJsonDocument json)
+void updateData(int index, String heure, int poids, DynamicJsonDocument json)
 {
     String s = "{\"action\":\"update\", \"id\":";
+    s.concat("\"");
     s.concat(id);
+    s.concat("\"");
+    s.concat(",\"isArduino\" : 1 ,");
     String repasId = json["repas"][index]["id"];
-    s.concat("\"repasID\":");
+    s.concat("\"repasId\":");
+    s.concat("\"");
     s.concat(repasId);
-    s.concat("\"heure\":\"");
+    s.concat("\"");
+    s.concat(", \"heure\":\"");
     s.concat(heure);
-    s.concat("\"poids\":\"");
+    s.concat("\"");
+    s.concat(", \"poids\":");
+    s.concat(poids);
+    s.concat("}");
+    Serial.println(s);
+    sendMessage(s);
+}
+void addMeal(String heure, int poids)
+{
+    String s = "{\"action\":\"addMeal\", \"id\":";
+    s.concat("\"");
+    s.concat(id);
+    s.concat("\"");
+    s.concat(", \"heure\":\"");
+    s.concat(heure);
+    s.concat("\"");
+    s.concat(",\"isArduino\" : 1 ,");
+    s.concat("\"poids\":");
     s.concat(poids);
     s.concat("}");
     Serial.println(s);
     sendMessage(s);
 }
 
-void distribution(int poids)
+void addHistorique(int poids)
 {
-    // TODO: allumer moteur pas à pas et regarder le poids du capteur
+    String s = "{\"action\":\"eatNow\", \"id\":";
+    s.concat("\"");
+    s.concat(id);
+    s.concat("\"");
+    s.concat(", \"poids\":");
+    s.concat(poids);
+    s.concat(",\"isArduino\" : 1 ");
+    s.concat("}");
+    Serial.println(s);
+    sendMessage(s);
 }
-
 void sendMessage(String json)
 {
     checkConnection();

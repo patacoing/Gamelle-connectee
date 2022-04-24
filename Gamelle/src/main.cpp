@@ -21,12 +21,17 @@
 #endif
 
 extern String id;
+extern int dirPin = 9;
+extern int stepPin = 10;
+extern int enable = 8;
 DynamicJsonDocument json(2048);
 void setup()
 {
     Serial.begin(9600);
-    while (!Serial)
-        ;
+    pinMode(stepPin, OUTPUT);
+    pinMode(dirPin, OUTPUT);
+    pinMode(enable, OUTPUT);
+    digitalWrite(enable, LOW);
     initScreen();
     welcome();
     myId(); // on renseigne notre id
@@ -35,12 +40,13 @@ void setup()
     printData();
     initSocket(); // on démarre la connection permanente entre l'arduino et le serveur
     mainMenu();
+    nextMeal();
 }
 
 void loop()
 {
-    Serial.println("----------------------------------------");
+    //   Serial.println("----------------------------------------");
     checkMessage();
     checkKeypad();
-    Serial.println("----------------------------------------");
+    //  Serial.println("----------------------------------------");
 }

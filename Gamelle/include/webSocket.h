@@ -23,7 +23,7 @@
 #define spi
 #endif
 
-#define MONPORT 80
+#define MONPORT 8100
 
 DynamicJsonDocument getMessage();
 DynamicJsonDocument getAllMeal();
@@ -37,5 +37,7 @@ void initWifi();
 void checkMessage();
 void myId();
 void printData();
-void updateData(int index, int heure, int poids, DynamicJsonDocument json);
-void deleateMeal(int index, DynamicJsonDocument json);
+void updateData(int index, String heure, int poids, DynamicJsonDocument json);
+void deleteMeal(int index, DynamicJsonDocument json);
+void addMeal(String heure, int poids);
+void addHistorique(int poids);

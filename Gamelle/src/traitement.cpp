@@ -19,13 +19,22 @@
 #include <webSocket.h>
 #endif
 
+#ifndef CAPTEUR_H
+#define CAPTEUR_H
+#include <capteurPoids.h>
+#endif
+
+#include <stepMotor.h>
+
 extern GUI_Bitmap_t bmbienvenue;
 extern GUI_Bitmap_t bmmenu_principal;
-extern GUI_Bitmap_t bmmenu_showmeal;
 extern GUI_Bitmap_t bmrenseignerpoids;
 extern GUI_Bitmap_t bmrenseigner_heure;
 extern GUI_Bitmap_t bmchoix_poids_heure;
-
+extern GUI_Bitmap_t bmchoix_menu;
+extern GUI_Bitmap_t bmchoix_heure_poids;
+extern GUI_Bitmap_t bmappairage;
+extern String id;
 void traitementClavier(char input)
 {
     switch (input)
@@ -39,112 +48,164 @@ void traitementClavier(char input)
     case MENU_MODIFICATION:
         traitementUpdateDelete(MODIFICATION);
         break;
+    case MENU_DISTRIBUTION:
+        traitementDistribution();
+        break;
+    case MENU_APPAIRAGE:
+        traitementAppairage();
+        break;
     default:
         break;
     }
 }
 
+void traitementAppairage()
+{
+    char myId[50];
+    int compteur = 0;
+    afficherImage(&bmappairage, 0, 0);
+    id.toCharArray(myId, id.length() + 1);
+    afficherString(myId, 8, 20);
+    char input = 0;
+    do
+    {
+        input = readKeypad();
+        delay(20);
+        compteur++;
+    } while (input != 'B' && compteur < 9999);
+    mainMenu();
+}
 void traitementUpdateDelete(char choix)
 {
-    char index;
-    afficherImage(&bmmenu_showmeal, 0, 0);
+    int index;
+    afficherImage(&bmchoix_menu, 0, 0);
     DynamicJsonDocument json = afficherMenu();
     index = getMenu();
     if (index == -1)
-        afficherImage(&bmmenu_principal, 0, 0);
+        mainMenu();
     else
     {
         if (choix == SUPPRESSION)
-            deleateMeal(index, json);
+            deleteMeal(index - 1, json);
         else if (choix == MODIFICATION)
         {
-            traitementUpdate(index);
+            traitementUpdate(index - 1, json);
         }
-        afficherImage(&bmmenu_principal, 0, 0);
+        mainMenu();
     }
 }
 
-char getMenu()
+int getMenu()
 {
-    char index = -1;
+    int index = -1;
+    int compteur = 0;
     char input;
     do
     {
         input = readKeypad();
-        if (input >= 0 && input <= 9)
+        if (input >= '0' && input <= '9')
         {
-            index = input;
+            index = input - '0';
             break;
         }
+        compteur++;
         delay(20);
-    } while (input != 'B');
+    } while (input != 'B' && compteur < 9999);
     return index;
 }
 DynamicJsonDocument afficherMenu()
 {
     String s = "";
-    char *str;
-    int compteurY = 0;
+    char str[20];
+    int compteurY = 2;
     DynamicJsonDocument json = getAllMeal();
     int i = 0;
     while (!json["repas"][i].isNull())
     {
         s = "";
         s.concat(i + 1);
-        s.concat(" : ");
-        String heures = json["repas"][i]["heures"];
         s.concat(" ");
+        String heures = json["repas"][i]["heure"];
         s.concat(heures);
+        s.concat(",");
         String poids = json["repas"][i]["poids"];
         s.concat(poids);
-        s.concat(" g");
-        s.toCharArray(str, s.length());
-        if (i == 3)
-            compteurY = 0;
-        if (i < 4)
-        {
-            afficherString(str, 2, compteurY);
-        }
-        else
-        {
-            afficherString(str, 66, compteurY);
-        }
+        s.concat("g");
+        s.toCharArray(str, s.length() + 1);
+        afficherString(str, 30, compteurY);
         compteurY += 10;
         i++;
     }
     return json;
 }
-void traitementUpdate(int index)
+void traitementUpdate(int index, DynamicJsonDocument json)
 {
+    String heure = json["repas"][index]["heure"];
+    int poids = json["repas"][index]["poids"];
+    afficherImage(&bmchoix_heure_poids, 0, 0);
     char input;
+    int compteur = 0;
     do
     {
         input = readKeypad();
+        compteur++;
         delay(20);
-    } while (input != 'C' || input != 'D' || input != 'B');
-
-    if (input != 'B')
+    } while (input != 'C' && input != 'D' && input != 'B' && compteur < 9999);
+    if (compteur == 9999)
     {
-        afficherImage(&bmchoix_poids_heure, 0, 0);
-        int poids = getPoids();
-        char *heure = getHeure();
-        if (poids == -1 || heure[0] - 1 || heure[1] == -1)
-            afficherImage(&bmmenu_principal, 0, 0);
+        input = -1;
     }
-    afficherImage(&bmmenu_principal, 0, 0);
+
+    if (input != 'B' && input != -1)
+    {
+        do
+        {
+            input = readKeypad();
+            delay(20);
+        } while (input != 'C' && input != 'D');
+        if (input == 'D')
+        {
+            poids = getPoids();
+            json["repas"][index]["poids"].set(poids);
+        }
+        else
+        {
+            heure = getHeure();
+            json["repas"][index]["heure"].set(heure);
+        }
+        updateData(index, heure, poids, json);
+    }
+    else
+    {
+        mainMenu();
+    }
 }
 
 void traitementAjout()
 {
-    int poids = getPoids();
-    char *heure = getHeure();
-    if (poids == -1 || heure[0] - 1 || heure[1] == -1)
-        afficherImage(&bmmenu_principal, 0, 0);
+    int poids = 0;
+    do
+    {
+        poids = getPoids();
+    } while (poids > 300);
 
-    // TODO: écrire dans le json et l'envoyer
+    if (poids == -1)
+    {
+        mainMenu();
+    }
+    else
+    {
+        String heure = getHeure();
+        Serial.println(heure);
+        if (heure.equals("-1"))
+            mainMenu();
+        else
+            addMeal(heure, poids);
+        mainMenu();
+    }
 }
 
-char getPoids()
+int getPoids()
 {
     afficherImage(&bmrenseignerpoids, 0, 0);
     char chiffre[3];
@@ -155,93 +216,229 @@ char getPoids()
     tabDizaine[1] = 10;
     tabDizaine[0] = 1;
     char length;
-    char input;
+    char input = -1;
+    int compteur = 0;
     do
     {
+        compteur++;
         input = readKeypad();
-        if (input >= 0 && input <= 9)
+        if (input != NULL)
         {
-            chiffre[indexDizaine] = (char)input;
-            indexDizaine++;
+            if ((input >= '0'))
+                if ((input <= '9'))
+                {
+                    chiffre[indexDizaine] = (char)input - '0';
+                    indexDizaine++;
+                    afficherString(&input, 50 + indexDizaine * 5, 20);
+                    cleanFont(56 + indexDizaine * 5, 20, 30, 8, WHITE_FILL);
+                }
         }
         delay(20);
-    } while (input != 'A' || input != 'B');
-    if (input == 'B')
+    } while (((input != 'A') && (input != 'B')) && (indexDizaine < 3) && (compteur < 9999));
+    if (input == 'B' || compteur == 9999)
         return -1; // retour
-
-    length = indexDizaine;
-    for (int i = 0; i < length; i++)
+    if (indexDizaine > 1)
     {
-        poids += chiffre[i] * tabDizaine[indexDizaine];
-        indexDizaine--;
+        length = indexDizaine;
+        for (int i = 0; i < length; i++)
+        {
+            indexDizaine--;
+            poids += chiffre[i] * tabDizaine[indexDizaine];
+        }
     }
+    else
+    {
+        poids = chiffre[0];
+    }
+    Serial.println(poids);
     return poids;
-    // TODO: ecrire les chiffres du poids
 }
-char *getHeure()
+String getHeure()
 {
     afficherImage(&bmrenseigner_heure, 0, 0);
-    char heure[2];
-    heure[0] = checkHeure();
-    heure[1] = checkMinute();
+    String heure = "";
+    int h = checkHeure();
+    if (h == -1)
+        return "-1";
+    else
+    {
+        if (h <= 9)
+        {
+            heure.concat("0");
+            heure.concat(h);
+        }
+        else
+        {
+            heure.concat(h);
+        }
+    }
+    heure.concat(":");
+    int m = checkMinute();
+    if (m == -1)
+        return "-1";
+    else
+    {
+        if (m <= 9)
+        {
+            heure.concat("0");
+            heure.concat(m);
+        }
+        else
+        {
+            heure.concat(m);
+        }
+    }
     return heure;
 }
-char checkHeure()
+int checkHeure()
 {
-    char heure;
+    int heure = 0;
     char compteurPuissance = 10;
     char compteurIteration = 0;
     char input;
     boolean flag = false;
+    int compteur = 0;
     do
     {
         input = readKeypad();
-        if (input == 'B')
-            return -1;
-        if (input >= 0 && input <= 9)
+        compteur++;
+        if (input != NULL)
         {
-            heure = input * compteurPuissance;
-            compteurPuissance = compteurPuissance / 10;
-            compteurIteration++;
-            if (compteurIteration == 2 && heure >= 24)
+            if (input == 'B')
+                return -1;
+            if (input >= '0' && input <= '9')
             {
-                compteurIteration = 0;
-                heure = 0;
-                flag = true;
-                // TODO: ecrire les chiffres des hueures et supprimer l'heure de l'écran si non valide
+                heure += ((input - '0') * compteurPuissance);
+                compteurPuissance = compteurPuissance / 10;
+                compteurIteration++;
+                afficherString(&input, 40 + compteurIteration * 5, 20);
+                cleanFont(46 + compteurIteration * 5, 20, 30, 8, WHITE_FILL);
+                Serial.println(heure);
+                if (compteurIteration == 2 && heure >= 24)
+                {
+                    compteurIteration = 0;
+                    heure = 0;
+                    compteurPuissance = 10;
+                    cleanFont(40, 20, 30, 8, WHITE_FILL);
+                }
+                else if (compteurIteration == 2 && heure < 24)
+                {
+                    flag = true;
+                }
             }
         }
         delay(20);
-    } while (flag == false);
+    } while (flag == false && compteur < 9999);
+    char separateur[] = " : ";
+    if (compteur == 9999)
+        return -1;
+    afficherString(separateur, 45 + compteurIteration * 5, 20);
     return heure;
 }
 
-char checkMinute()
+int checkMinute()
 {
-    char minutes;
+    int minutes;
     char compteurPuissance = 10;
     char compteurIteration = 0;
     char input;
     boolean flag = false;
+    int compteur = 0;
     do
     {
         input = readKeypad();
-        if (input == 'B')
-            return -1;
-        if (input >= 0 && input <= 9)
+        compteur++;
+        if (input != NULL)
         {
-            minutes = input * compteurPuissance;
-            compteurPuissance = compteurPuissance / 10;
-            compteurIteration++;
-            if (compteurIteration == 2 && minutes >= 60)
+            if (input == 'B')
+                return -1;
+            if (input >= '0' && input <= '9')
             {
-                compteurIteration = 0;
-                minutes = 0;
-                flag = true;
-                // TODO:  pareil comme au dessus
+                minutes += (input - '0') * compteurPuissance;
+                Serial.println(input);
+                Serial.println(minutes);
+                compteurPuissance = compteurPuissance / 10;
+                compteurIteration++;
+                afficherString(&input, 64 + compteurIteration * 5, 20);
+                cleanFont(70 + compteurIteration * 5, 20, 30, 8, WHITE_FILL);
+                if (compteurIteration == 2 && minutes >= 60)
+                {
+                    compteurIteration = 0;
+                    minutes = 0;
+                    cleanFont(64, 20, 30, 8, WHITE_FILL);
+                }
+                else if (compteurIteration == 2 && minutes < 60)
+                {
+                    flag = true;
+                }
             }
         }
         delay(20);
-    } while (flag == true);
+    } while (flag == false && compteur < 9999);
+    if (compteur == 9999)
+        return -1;
     return minutes;
+}
+
+void nextMeal()
+{
+    checkMessage();
+    DynamicJsonDocument json = getNextMeal();
+    if (!json.isNull())
+    {
+        showNextMeal(json);
+    }
+}
+void showNextMeal(DynamicJsonDocument json)
+{
+    char strP[5];
+    char strH[10];
+    String heure = json["repas"]["heure"];
+    String poids = json["repas"]["poids"];
+    poids.concat("g");
+    Serial.println(heure);
+    Serial.println(poids);
+    if (heure.equals("-1") || poids.equals("-1"))
+    {
+        Serial.println("rentré!");
+        heure = "aucun";
+        poids = "aucun";
+    }
+
+    poids.toCharArray(strP, poids.length() + 1);
+    heure.toCharArray(strH, heure.length() + 1);
+    afficherString(strH, 31, 49);
+    afficherString(strP, 29, 37);
+}
+
+void traitementDistribution()
+{
+    int poids = 0;
+    int compteur = 0;
+    do
+    {
+        compteur++;
+        poids = getPoids();
+    } while (poids > 300 && compteur < 9999);
+    if (poids == -1 || compteur == 9999)
+        mainMenu();
+    else
+    {
+        distribution(poids);
+        addHistorique(poids);
+        mainMenu();
+    }
+}
+
+void mainMenu()
+{
+    afficherImage(&bmmenu_principal, 0, 0);
+    nextMeal();
+}
+
+void distribution(int poids)
+{
+    int nbTours = poids % 10;
+    for (int i = 0; i < nbTours; i++)
+        moveStepper();
 }
