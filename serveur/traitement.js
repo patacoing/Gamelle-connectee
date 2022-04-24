@@ -72,8 +72,7 @@ function requestData(currentId, ws) {
  * @param data: json {id,repasId,heure,poids}
  * @param ws : client 
  */
-//FIXME: quand update avec le client, la fonction distribution est lancée
-//mais la gamelle ne reçoit pas le message
+//fonctionne
 async function update(data, ws) {
     ws = isArduino(ws, data.id);
     if (ws === false) return;
@@ -103,7 +102,7 @@ function isArduino(ws, id) {
     if (!ws.isArduino) {
         c = clients.find(c => c.id === id);
         if (c === undefined) {
-            ws.send(JSON.stringify({ message: "gamelle non connectée", error: 404 }));
+            ws.send(JSON.stringify({ message: "gamelle non connectée" }));
             return false;
         } else return c.ws;
     } else return ws;
@@ -143,7 +142,7 @@ async function addMeal(data, ws) {
             })
             .catch(e => error("* addMeal - " + e));
     } else {
-        ws.send(JSON.stringify({ message: "nombre de repas trop élevé", error: 403 }));
+        ws.send(JSON.stringify({ message: "nombre de repas trop élevé" }));
         return false;
     }
 }
@@ -175,7 +174,6 @@ function restartCrontabs(indexCron, ws) {
  * @returns promise
  */
 //fonctionne
-//TODO: à tester avec l'appli web
 async function deleteMeal(data, ws) {
     ws = isArduino(ws, data.id);
     if (ws === false) return;
@@ -207,7 +205,6 @@ async function deleteMeal(data, ws) {
  * @returns promise
  */
 //fonctionne
-//TODO: à tester avec l'appli web
 function nextMeal(data, ws, send = true) {
     return gamelle.findOne(
         { id: data.id })
@@ -259,7 +256,7 @@ function nextMeal(data, ws, send = true) {
                 else return g.repas[index];
 
             } else {
-                if (send) ws.send(JSON.stringify({ action: "newNextMeal", heure: -1, poids: -1 }));
+                if (send) ws.send(JSON.stringify({ action: "newNextMeal", repas: { heure: -1, poids: -1 } }));
                 else return undefined;
             }
         })
@@ -272,7 +269,6 @@ function nextMeal(data, ws, send = true) {
  * @returns promise
  */
 //fonctionne
-//TODO: à tester avec l'appli web
 function eatNow(data, ws) {
     ws = isArduino(ws, data.id);
     if (ws === false) return;
