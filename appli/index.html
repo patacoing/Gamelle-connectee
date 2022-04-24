@@ -1,26 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
-    <!-- Latest compiled and minified CSS -->
-    <script src="jquery-3.4.1.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css"
-        integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 
-    <!-- Optional theme -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap-theme.min.css"
-        integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
-
-    <!-- Latest compiled and minified JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js"
-        integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
 
-
+    <!-- Latest compiled and minified CSS -->
+    <script src="jquery-3.4.1.min.js"></script>
     <script type="text/javascript" src="script.js"></script>
     <title>Gamelle connectée</title>
 </head>
@@ -28,34 +28,42 @@
 <body>
     <div id="conteneur">
         <div id="entete">
+            <img src="./logo.png" alt="logo gamelle connectée" />
             <div id="afterlog">
-                <input type="button" value="deconnexion" id="deconnexion">
+                <input type="button" class="btn btn-outline-danger" value="deconnexion" id="deconnexion">
             </div>
             <div id="login">
                 <h2>Numéro appairage</h2>
                 <input type="text" class="form-control" value="228181341820716470" id="Appairage">
-                <input type=button value="Go!" id="connexion">
+                <input type=button value="Connexion" class="btn btn-outline-success" id="connexion">
             </div>
         </div>
         <div id="corps">
             <div id="goNewRepas">
-                <h3>Créer un repas : </h3>
-                <input type="button" value="Go!" id="goCreation">
+                <label>Créer un repas</label>
+                <input type="button" class="btn btn-outline-success" value="X" id="goCreation">
             </div>
             <div id="repas">
-                <h3>Repas courant : </h3>
-                <select id="listRepas"></select>
-                <input type="button" value="modifier" id="modifier">
-                <input type="button" value="supprimer" id="supprimer">
+                <div class="repas-select">
+                    <p>Repas : </p>
+                    <select class="form-control" id="listRepas"></select>
+                </div>
+                <div class="repas-bouton">
+                    <input type="button" class="btn btn-outline-dark" value="modifier" id="modifier">
+                    <input type="button" class="btn btn-outline-danger" value="supprimer" id="supprimer">
+                </div>
             </div>
             <div id="updateCreateRepas">
-                <h3>Renseignez les valeurs</h3>
-                <p>heure : </p>
-                <input type="time" id="time" min="00:00" max="23:59">
-                <p> poids en grammmes</p>
-                <input type="number" inputmode="none" class="form-control" onKeyDown="return false" id="poids" value="0"
-                    min="0" max="300">
-                <input type="button" id="creationRepas" value="créer!">
+                <div>
+                    <label for="time">heure : </label>
+                    <input type="time" id="time" class="form-control" min="00:00" max="23:59">
+                </div>
+                <div>
+                    <label for="poids">poids en grammes : </label>
+                    <input type="number" inputmode="none" class="form-control" onKeyDown="return false" id="poids"
+                        value="0" min="0" max="300">
+                </div>
+                <input type="button" id="creationRepas" class="btn btn-outline-dark" value="Créer">
             </div>
         </div>
     </div>

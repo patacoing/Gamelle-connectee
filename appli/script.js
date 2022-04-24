@@ -31,7 +31,7 @@ $(document).on("click", "#connexion", () => {
 $(document).on("click", "#goCreation", () => {
     updateCreate = 1
     $("#updateCreateRepas").show();
-    $("#creationRepas").val("créer!");
+    $("#creationRepas").val("créer");
     $("#poids").val(0);
     $("#time").val("00:00");
 });
@@ -65,7 +65,7 @@ $(document).on("click", "#modifier", () => {
     updateCreate = 0;
     $("#poids").val(poids);
     $("#time").val(heure);
-    $("#creationRepas").val("modifier!");
+    $("#creationRepas").val("modifier");
     $("#updateCreateRepas").show();
     //console.log(heure, poids);
     //updateMeal(heure, poids, repasId);
