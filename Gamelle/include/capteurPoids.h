@@ -1,0 +1,3 @@
+
+double getTension();
+int getMasse();
