@@ -116,6 +116,8 @@ body {
     align-items: center;
 }
 
+
+
 #goNewRepas {
     padding: 20px;
     margin: 10px;
@@ -191,4 +193,8 @@ body {
 
 #updateCreateRepas>div label {
     width: 220px;
+}
+
+#goDistribution>label {
+    margin-right: 20px;
 }
