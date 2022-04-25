@@ -14,15 +14,28 @@ function showDeconnexion() {
 }
 
 $(document).on("click", "#deconnexion", () => {
-    showConnexion();
+    $("#login").show();
+    $("#corps").hide();
+    $("#afterlog").hide();
+});
 
+$(document).on("keyup", "#poids", function () {
+    regexp = new RegExp('[^0-9].*', "g");
+    console.log($(this).val());
+    if (regexp.test($(this).val())) {
+        $(this).val("");
+    }
+    else if ($(this).val() > 300) {
+        $(this).val("");
+    }
 });
 
 
 $(document).on("click", "#connexion", () => {
+    $("#login").hide();
+    $("#afterlog").show();
     id = $("#Appairage").val();
     showMenuSelect();
-    console.log(socket.isOpen)
     checkWebSocket();
 
 });
@@ -52,11 +65,10 @@ $(document).on("click", "#supprimer", () => {
 });
 
 $(document).on("click", "#creationRepas", () => {
-
-    const poids = $("#poids").val();
+    let poids;
+    if ($("#poids").val() == "") poids = 1;
+    else poids = $("#poids").val()
     const heure = $("#time").val();
-    console.log("updateCreateDistrib")
-    console.log(updateCreateDistrib);
     if (updateCreateDistrib == 1)
         createMeal(heure, poids);
     else if (updateCreateDistrib == 0) {
@@ -65,7 +77,6 @@ $(document).on("click", "#creationRepas", () => {
 
     }
     else if (updateCreateDistrib == -1) {
-        console.log("coucou")
         distribution(poids);
     }
     showMenuSelect();
@@ -92,10 +103,7 @@ socket.onclose = () => {
 
 function showMenuSelect() {
     getAllMeal().then((data) => {
-        console.log("rentré!");
-        console.log("action : ");
-        console.log(data.action);
-        console.log(data);
+
         $("#listRepas").html("");
         data.repas.forEach((repas) => {
 

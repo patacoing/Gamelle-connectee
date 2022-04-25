@@ -100,11 +100,10 @@ body {
 
 #afterlog {
     display: none;
-    border: 2px solid rgb(0, 0, 0);
-    background-color: rgba(197, 24, 24, 0.603);
     border-radius: 2%;
     padding: 15px;
     text-align: center;
+    margin-bottom: 50px;
 }
 
 
@@ -197,4 +196,8 @@ body {
 
 #goDistribution>label {
     margin-right: 20px;
+}
+
+#deconnexion {
+    padding: 10px;
 }
