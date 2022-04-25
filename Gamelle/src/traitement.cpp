@@ -398,13 +398,13 @@ void showNextMeal(DynamicJsonDocument json)
     poids.concat("g");
     Serial.println(heure);
     Serial.println(poids);
+    cleanFont(29, 49, 8, 5, WHITE_FILL);
     if (heure.equals("-1") || poids.equals("-1"))
     {
         Serial.println("rentré!");
         heure = "aucun";
         poids = "aucun";
     }
-
     poids.toCharArray(strP, poids.length() + 1);
     heure.toCharArray(strH, heure.length() + 1);
     afficherString(strH, 31, 49);
