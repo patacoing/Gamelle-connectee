@@ -6,8 +6,8 @@
 #define TRAITEMENT
 #include <traitement.h>
 #endif
-char ssid[] = "FREEBOX_LUC_Y7";  // SSID (nom)
-char pass[] = "watterdal62380";  // mot de passe
+char ssid[] = "";                // SSID (nom)
+char pass[] = "";                // mot de passe
 int status = WL_IDLE_STATUS;     // status
 char server[] = "141.94.203.97"; // IP du serveur distant
 String id;
