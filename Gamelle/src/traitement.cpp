@@ -438,7 +438,16 @@ void mainMenu()
 
 void distribution(int poids)
 {
-    int nbTours = poids % 10;
-    for (int i = 0; i < nbTours; i++)
-        moveStepper();
+    if (poids > 0)
+    {
+        if (poids <= 9)
+            moveStepper();
+        else
+        {
+            int nbTours = poids / 10;
+            Serial.println(nbTours);
+            for (int i = 0; i <= nbTours; i++)
+                moveStepper();
+        }
+    }
 }
