@@ -184,3 +184,11 @@ body {
 #goDistribution>label {
     margin-right: 20px;
 }
+
+#deconnexion {
+    padding: 10px;
+}
+
+#afterlog {
+    margin-bottom: 50px;
+}
