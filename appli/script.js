@@ -113,9 +113,11 @@ function showMenuSelect() {
         $("#listRepas").html("");
         if (data.repas.length == 0) {
             $("#modifier").hide();
+            $("#supprimer").hide();
         }
         else {
             $("#modifier").show();
+            $("#supprimer").show();
         }
         data.repas.forEach((repas) => {
             $("#listRepas").append($("<option>").val(repas.id).html("heure : " + repas.heure + " ,  poids " + repas.poids + " g").data(("time"), (repas.heure)).data(("poids"), (repas.poids)));
