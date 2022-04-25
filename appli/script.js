@@ -47,6 +47,7 @@ $(document).on("click", "#creationRepas", () => {
 
     const poids = $("#poids").val();
     const heure = $("#time").val();
+    console.log(poids, heure);
 
     if (updateCreate == 1)
         createMeal(heure, poids);

@@ -269,6 +269,7 @@ function nextMeal(data, ws, send = true) {
  * @returns promise
  */
 //fonctionne
+//TODO: pouvoir faire eatnow depuis appli web
 function eatNow(data, ws) {
     ws = isArduino(ws, data.id);
     if (ws === false) return;

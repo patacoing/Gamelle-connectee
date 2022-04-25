@@ -20,5 +20,11 @@ services:
       - 8100:8100
     depends_on:
       - mongodb
+  appli:
+    image: patacoing/pind:appli
+    container_name: appli
+    restart: always
+    ports:
+      - 80:80
 volumes:
   db-volume:
