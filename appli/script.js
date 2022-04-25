@@ -61,6 +61,12 @@ $(document).on("click", "#supprimer", () => {
     const repasId = $("#listRepas").val();
     console.log(repasId);
     deleteMeal(repasId);
+    $("#updateCreateRepas").hide();
+    $("#poids").val(0);
+    $("#time").val("00:00");
+    $("#creationRepas").val("creer");
+    updateCreateDistrib = -2;
+
     showMenuSelect();
 });
 
@@ -105,8 +111,13 @@ function showMenuSelect() {
     getAllMeal().then((data) => {
 
         $("#listRepas").html("");
+        if (data.repas.length == 0) {
+            $("#modifier").hide();
+        }
+        else {
+            $("#modifier").show();
+        }
         data.repas.forEach((repas) => {
-
             $("#listRepas").append($("<option>").val(repas.id).html("heure : " + repas.heure + " ,  poids " + repas.poids + " g").data(("time"), (repas.heure)).data(("poids"), (repas.poids)));
         });
 
@@ -176,6 +187,7 @@ function deleteMeal(repasId) {
         repasId: repasId,
         id: id
     }
+    console.log(msg)
     socket.send(JSON.stringify(msg));
 }
 function updateMeal(heure, poids, repasId) {
