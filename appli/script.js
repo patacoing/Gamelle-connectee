@@ -1,16 +1,13 @@
 const socket = new WebSocket("ws://141.94.203.97:8100");
 let id = "";
-let updateCreate; //boléen
+let updateCreateDistrib;
 $(document).ready(() => {
     $("#afterlog").hide();
     $("#corps").hide();
     $("#updateCreateRepas").hide();
+
 });
 
-
-function showConnexion() {
-
-}
 function showDeconnexion() {
     $("#login").hide();
     $("#afterlog").show();
@@ -25,12 +22,23 @@ $(document).on("click", "#deconnexion", () => {
 $(document).on("click", "#connexion", () => {
     id = $("#Appairage").val();
     showMenuSelect();
+    console.log(socket.isOpen)
+    checkWebSocket();
 
 });
-
-$(document).on("click", "#goCreation", () => {
-    updateCreate = 1
+$(document).on("click", "#distribuer", () => {
+    updateCreateDistrib = -1;
+    console.log("distribuer");
     $("#updateCreateRepas").show();
+    $("#creationRepas").val("distribuer");
+    $("#divHeure").hide();
+    $("#poids").val(0);
+
+});
+$(document).on("click", "#goCreation", () => {
+    updateCreateDistrib = 1;
+    $("#updateCreateRepas").show();
+    $("#divHeure").show();
     $("#creationRepas").val("créer");
     $("#poids").val(0);
     $("#time").val("00:00");
@@ -47,13 +55,18 @@ $(document).on("click", "#creationRepas", () => {
 
     const poids = $("#poids").val();
     const heure = $("#time").val();
-
-    if (updateCreate == 1)
+    console.log("updateCreateDistrib")
+    console.log(updateCreateDistrib);
+    if (updateCreateDistrib == 1)
         createMeal(heure, poids);
-    else {
+    else if (updateCreateDistrib == 0) {
         const repasId = $("#listRepas").val();
         updateMeal(heure, poids, repasId);
 
+    }
+    else if (updateCreateDistrib == -1) {
+        console.log("coucou")
+        distribution(poids);
     }
     showMenuSelect();
 })
@@ -62,25 +75,20 @@ $(document).on("click", "#modifier", () => {
     const poids = $("#listRepas option:selected").data("poids");
     const heure = $("#listRepas option:selected").data("time");
 
-    updateCreate = 0;
+    updateCreateDistrib = 0;
+    $("#divHeure").show();
     $("#poids").val(poids);
     $("#time").val(heure);
     $("#creationRepas").val("modifier");
     $("#updateCreateRepas").show();
-    //console.log(heure, poids);
-    //updateMeal(heure, poids, repasId);
 })
 socket.onmessage = (event) => {
     console.log("event!")
     console.log(event.data);
-    switch (data.action) {
-        case "eatNow":
-            break;
-        default:
-            break;
-    }
 }
-
+socket.onclose = () => {
+    $("#corps").hide();
+}
 
 function showMenuSelect() {
     getAllMeal().then((data) => {
@@ -127,14 +135,6 @@ function getAllMeal() {
             if (data.action == undefined) {
                 cb(data);
             }
-            else {
-                switch (data.action) {
-                    case "eatNow":
-                        break;
-                    default:
-                        break;
-                }
-            }
         }
     })
 }
@@ -149,6 +149,17 @@ function createMeal(heure, poids) {
     }
     socket.send(JSON.stringify(msg));
 }
+
+function distribution(poids) {
+    const msg = {
+        type: "message",
+        action: "eatNow",
+        poids: poids,
+        id: id
+    }
+    socket.send(JSON.stringify(msg));
+}
+
 
 function deleteMeal(repasId) {
     const msg = {
@@ -186,4 +197,11 @@ function sleep(milliseconds) {
     do {
         currentDate = Date.now();
     } while (currentDate - date < milliseconds);
+}
+
+function checkWebSocket() {
+    if (ws.readyState === ws.OPEN) {
+        $("#updateCreateRepas").hide();
+    }
+    window.setTimeout(checkWebSocket, 30000);
 }

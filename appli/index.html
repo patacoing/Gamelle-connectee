@@ -39,9 +39,13 @@
             </div>
         </div>
         <div id="corps">
+            <div id="goDistribution">
+                <label>Distribuer Maintenant</label>
+                <input type="button" class="btn btn-outline-success" value="O" id="distribuer">
+            </div>
             <div id="goNewRepas">
                 <label>Créer un repas</label>
-                <input type="button" class="btn btn-outline-success" value="X" id="goCreation">
+                <input type="button" class="btn btn-outline-success" value="O" id="goCreation">
             </div>
             <div id="repas">
                 <div class="repas-select">
@@ -54,11 +58,11 @@
                 </div>
             </div>
             <div id="updateCreateRepas">
-                <div>
+                <div id="divHeure">
                     <label for="time">heure : </label>
                     <input type="time" id="time" class="form-control" min="00:00" max="23:59">
                 </div>
-                <div>
+                <div id="divPoids">
                     <label for="poids">poids en grammes : </label>
                     <input type="number" inputmode="none" class="form-control" onKeyDown="return false" id="poids"
                         value="0" min="0" max="300">
