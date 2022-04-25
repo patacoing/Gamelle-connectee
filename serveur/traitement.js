@@ -102,7 +102,6 @@ function isArduino(ws, id) {
     if (!ws.isArduino) {
         c = clients.find(c => c.id === id);
         if (c === undefined) {
-            ws.send(JSON.stringify({ message: "gamelle non connectée" }));
             return false;
         } else return c.ws;
     } else return ws;
@@ -269,10 +268,7 @@ function nextMeal(data, ws, send = true) {
  * @returns promise
  */
 //fonctionne
-//TODO: pouvoir faire eatnow depuis appli web
 function eatNow(data, ws) {
-    ws = isArduino(ws, data.id);
-    if (ws === false) return;
     return gamelle.findOne(
         { id: data.id })
         .then(async g => {
@@ -282,7 +278,12 @@ function eatNow(data, ws) {
             const minuteNow = parseInt(now.getMinutes());
             const heure = heureNow + ":" + minuteNow;
             await gamelle.updateOne({ id: data.id }, { $push: { historique: { id: ++lastId, heure: heure, poids: data.poids } } });
-            nextMeal(data, ws);
+            console.log("ws.isArduino =" + ws.isArduino);
+            if (!ws.isArduino) {
+                ws = isArduino(ws, data.id);
+                if (ws === false) return;
+                distribution(data, ws);
+            }
         })
 }
 
