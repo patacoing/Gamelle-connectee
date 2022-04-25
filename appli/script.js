@@ -21,7 +21,7 @@ $(document).on("click", "#deconnexion", () => {
 
 $(document).on("keyup", "#poids", function () {
     regexp = new RegExp('[^0-9].*', "g");
-    console.log($(this).val());
+    if ($(this).val() == "") $(this).val("");
     if (regexp.test($(this).val())) {
         $(this).val("");
     }

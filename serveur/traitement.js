@@ -84,10 +84,13 @@ async function update(data, ws) {
         .then(async g => {
             let test = tasks.updateCrontab(data, () => distribution(data, ws));
             console.log("test = " + test);
-            nextMeal(data, ws, false).then(r => {
-                if ((r.heure != repas.heure) || (r.poids != repas.poids))
-                    ws.send(JSON.stringify({ action: "newNextMeal", repas: r }))
-            })
+            if (test !== false) {
+                nextMeal(data, ws, false).then(r => {
+                    if ((r.heure != repas.heure) || (r.poids != repas.poids))
+                        ws.send(JSON.stringify({ action: "newNextMeal", repas: r }))
+                })
+            }
+
         })
         .catch(e => error("* update - " + e));
 }
@@ -174,6 +177,7 @@ function restartCrontabs(indexCron, ws) {
  */
 //fonctionne
 async function deleteMeal(data, ws) {
+    console.log("* deleteMeal");
     ws = isArduino(ws, data.id);
     if (ws === false) return;
     var repas;
@@ -184,7 +188,9 @@ async function deleteMeal(data, ws) {
         .then(info => {
             if (info.modifiedCount != 0) gamelle.findOne({ id: data.id })
                 .then(async g => {
-                    tasks.deleteCrontab(data.id, data.repasId);
+                    console.log("* deleteMeal - update dans la bdd00");
+                    let res = tasks.deleteCrontab(data.id, data.repasId);
+                    console.log(res);
                     nextMeal(data, ws, false).then(r => {
                         if (r == undefined) //cas où les repas sont vides
                             ws.send(JSON.stringify({ action: "newNextMeal", repas: { heure: -1, poids: -1 } }));
