@@ -200,7 +200,7 @@ function sleep(milliseconds) {
 }
 
 function checkWebSocket() {
-    if (ws.readyState === ws.OPEN) {
+    if (socket.readyState !== socket.OPEN) {
         $("#updateCreateRepas").hide();
     }
     window.setTimeout(checkWebSocket, 30000);
